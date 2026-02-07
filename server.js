@@ -153,6 +153,15 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("toggle-transcription", (enabled) => {
+    if (!currentChannel) return;
+    if (enabled) {
+      transcriber.start(currentChannel);
+    } else {
+      transcriber.stop();
+    }
+  });
+
   socket.on("leave-channel", async () => {
     transcriber.stop();
     if (tmiClient) {

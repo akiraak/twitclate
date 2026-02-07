@@ -289,6 +289,7 @@
 
     toggleTranscription.addEventListener("change", () => {
       timeline.classList.toggle("hide-transcription", !toggleTranscription.checked);
+      socket.emit("toggle-transcription", toggleTranscription.checked);
     });
 
     function autoScroll(container) {
