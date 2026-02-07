@@ -9,6 +9,7 @@ Twitchチャットをリアルタイムで監視し、非日本語コメント�
 - **Twitch接続:** tmi.js (IRC経由)
 - **DB:** SQLite (better-sqlite3) — `data.db` に保存
 - **AI翻訳:** Google Gemini 3 Flash (@google/genai)
+- **音声文字起こし:** streamlink + ffmpeg + OpenAI Whisper API
 - **フロントエンド:** Vanilla HTML/CSS/JS (public/index.html 単一ファイル)
 
 ## プロジェクト構成
@@ -33,6 +34,7 @@ npm start  # node server.js — デフォルト http://localhost:3000
 | `TWITCH_TOKEN` | Twitch OAuth トークン (`oauth:...`) |
 | `BOT_NAME` | Twitch bot ユーザー名 |
 | `GEMINI_API_KEY` | Google Gemini API キー |
+| `OPENAI_API_KEY` | OpenAI API キー (Whisper文字起こし用) |
 | `PORT` | サーバーポート (デフォルト: 3000) |
 
 ## アーキテクチャ
@@ -66,7 +68,6 @@ npm start  # node server.js — デフォルト http://localhost:3000
 ### クライアント → サーバー
 - `join-channel` (channel: string) — チャンネルに接続
 - `leave-channel` — チャンネルから切断
-
 ### サーバー → クライアント
 - `current-channel` (channel) — 接続中のチャンネル (再接続時)
 - `channel-joined` (channel) — 接続成功
@@ -75,6 +76,7 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - `chat-message` ({id, channel, username, message, timestamp}) — チャットメッセージ
 - `chat-translation` ({id, translation}) — 翻訳結果 (元メッセージのidに紐づく)
 - `channel-list` (string[]) — 保存済みチャンネル候補一覧
+- `transcription` ({text, timestamp}) — 音声文字起こし結果
 
 ## コーディング規約
 

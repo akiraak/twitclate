@@ -5,6 +5,8 @@ const { Server } = require("socket.io");
 const tmi = require("tmi.js");
 const Database = require("better-sqlite3");
 const { GoogleGenAI } = require("@google/genai");
+const OpenAI = require("openai");
+const { spawn } = require("child_process");
 const path = require("path");
 
 const app = express();
@@ -13,6 +15,9 @@ const io = new Server(server);
 
 // Gemini AI setup
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// OpenAI Whisper setup
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // SQLite setup
 const db = new Database(path.join(__dirname, "data.db"));
@@ -91,6 +96,127 @@ async function translateIfNeeded(msgData) {
   }
 }
 
+// Transcription
+let transcription = null;
+
+function createWavBuffer(pcmData) {
+  const header = Buffer.alloc(44);
+  const sampleRate = 16000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmData.length;
+  const fileSize = 36 + dataSize;
+
+  header.write("RIFF", 0);
+  header.writeUInt32LE(fileSize, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16); // subchunk1 size
+  header.writeUInt16LE(1, 20); // PCM format
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(dataSize, 40);
+
+  return Buffer.concat([header, pcmData]);
+}
+
+async function transcribeChunk(pcmChunk) {
+  try {
+    const wavBuffer = createWavBuffer(pcmChunk);
+    const file = new File([wavBuffer], "audio.wav", { type: "audio/wav" });
+
+    const response = await openai.audio.transcriptions.create({
+      model: "whisper-1",
+      file,
+    });
+
+    const text = response.text.trim();
+    if (text) {
+      io.emit("transcription", {
+        text,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (e) {
+    console.error("Transcription error:", e.message);
+  }
+}
+
+function startTranscription(channel) {
+  if (transcription) {
+    stopTranscription();
+  }
+
+  const url = `https://www.twitch.tv/${channel}`;
+  const streamlinkProc = spawn("streamlink", [url, "audio_only", "-O"]);
+  const ffmpegProc = spawn("ffmpeg", [
+    "-i", "pipe:0",
+    "-ac", "1",
+    "-ar", "16000",
+    "-f", "s16le",
+    "-loglevel", "error",
+    "pipe:1",
+  ]);
+
+  streamlinkProc.stdout.pipe(ffmpegProc.stdin);
+
+  let buffer = Buffer.alloc(0);
+  const CHUNK_SIZE = 16000 * 2 * 7; // 7 seconds of 16kHz mono 16bit = 224,000 bytes
+
+  ffmpegProc.stdout.on("data", (data) => {
+    buffer = Buffer.concat([buffer, data]);
+    while (buffer.length >= CHUNK_SIZE) {
+      const chunk = buffer.subarray(0, CHUNK_SIZE);
+      buffer = buffer.subarray(CHUNK_SIZE);
+      transcribeChunk(chunk);
+    }
+  });
+
+  streamlinkProc.stderr.on("data", (data) => {
+    const msg = data.toString().trim();
+    if (msg) console.error("streamlink:", msg);
+  });
+
+  ffmpegProc.stderr.on("data", (data) => {
+    const msg = data.toString().trim();
+    if (msg) console.error("ffmpeg:", msg);
+  });
+
+  streamlinkProc.on("error", (err) => {
+    console.error("streamlink spawn error:", err.message);
+    stopTranscription();
+    io.emit("transcription-stopped");
+  });
+
+  ffmpegProc.on("error", (err) => {
+    console.error("ffmpeg spawn error:", err.message);
+    stopTranscription();
+    io.emit("transcription-stopped");
+  });
+
+  streamlinkProc.on("close", () => {
+    if (transcription) {
+      stopTranscription();
+      io.emit("transcription-stopped");
+    }
+  });
+
+  transcription = { streamlink: streamlinkProc, ffmpeg: ffmpegProc };
+}
+
+function stopTranscription() {
+  if (!transcription) return;
+  try { transcription.streamlink.kill(); } catch (e) {}
+  try { transcription.ffmpeg.kill(); } catch (e) {}
+  transcription = null;
+}
+
 app.use(express.static("public"));
 
 let tmiClient = null;
@@ -128,7 +254,6 @@ io.on("connection", (socket) => {
   if (currentChannel) {
     socket.emit("current-channel", currentChannel);
   }
-
   // Send saved channel list
   socket.emit("channel-list", getChannels.all().map((r) => r.name));
 
@@ -156,6 +281,8 @@ io.on("connection", (socket) => {
       io.emit("channel-joined", channel);
       // Broadcast updated channel list to all clients
       io.emit("channel-list", getChannels.all().map((r) => r.name));
+      // Auto-start transcription
+      startTranscription(channel);
     } catch (e) {
       console.error(`Failed to connect to #${channel}:`, e);
       tmiClient = null;
@@ -164,6 +291,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leave-channel", async () => {
+    stopTranscription();
     if (tmiClient) {
       try {
         await tmiClient.disconnect();
@@ -176,6 +304,7 @@ io.on("connection", (socket) => {
       io.emit("channel-left");
     }
   });
+
 });
 
 const PORT = process.env.PORT || 3000;
