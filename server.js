@@ -58,7 +58,7 @@ const insertMessage = db.prepare(
   `INSERT INTO messages (channel, username, message, timestamp) VALUES (?, ?, ?, ?)`
 );
 const getRecentMessages = db.prepare(
-  `SELECT username, message FROM messages WHERE channel = ? ORDER BY id DESC LIMIT 20`
+  `SELECT username, message FROM messages WHERE channel = ? AND timestamp > ? ORDER BY id DESC LIMIT 20`
 );
 const insertTranscription = db.prepare(
   `INSERT INTO transcriptions (channel, message, timestamp) VALUES (?, ?, ?)`
@@ -79,9 +79,9 @@ const SYSTEM_INSTRUCTION = `あなたはTwitchチャットの翻訳者です。
 
 async function translateIfNeeded(msgData) {
   try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const fiveMinAgo = new Date(Date.now() - 5 * 60000).toISOString();
     const recentTranscriptions = getRecentTranscriptions.all(msgData.channel, fiveMinAgo).reverse();
-    const recent = getRecentMessages.all(msgData.channel).reverse();
+    const recent = getRecentMessages.all(msgData.channel, fiveMinAgo).reverse();
     let context = "";
     if (recentTranscriptions.length > 0) {
       context +=
@@ -124,15 +124,37 @@ const TRANSCRIPTION_SYSTEM_INSTRUCTION = `あなたはTwitch配信者の発言�
 ルール:
 - 発言が日本語の場合、正確に「SKIP」とだけ返してください
 - それ以外は自然な日本語に翻訳してください
+- 会話の文脈を考慮して翻訳してください
 - 翻訳文のみを返してください。説明や注釈は不要です`;
 
 let transcriptionId = 0;
 
 async function translateTranscription(id, text) {
   try {
+    let context = "";
+    if (currentChannel) {
+      const fiveMinAgo = new Date(Date.now() - 5 * 60000).toISOString();
+      const recentTrans = getRecentTranscriptions.all(currentChannel, fiveMinAgo).reverse();
+      const recentChat = getRecentMessages.all(currentChannel, fiveMinAgo).reverse();
+      if (recentTrans.length > 0) {
+        context +=
+          "配信者の最近の発言:\n" +
+          recentTrans.map((t) => `配信者: ${t.message}`).join("\n") +
+          "\n\n";
+      }
+      if (recentChat.length > 0) {
+        context +=
+          "最近のチャット:\n" +
+          recentChat.map((m) => `${m.username}: ${m.message}`).join("\n") +
+          "\n\n";
+      }
+    }
+
+    const prompt = `${context}翻訳対象の配信者の発言: ${text}`;
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `翻訳対象: ${text}`,
+      contents: prompt,
       config: {
         systemInstruction: TRANSCRIPTION_SYSTEM_INSTRUCTION,
         thinkingConfig: { thinkingLevel: "minimal" },
