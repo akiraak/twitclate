@@ -172,6 +172,9 @@ async function translateTranscription(id, text) {
 
 // Transcription
 let transcription = null;
+let retryCount = 0;
+let retryTimer = null;
+const MAX_RETRIES = 5;
 
 function createWavBuffer(pcmData) {
   const header = Buffer.alloc(44);
@@ -263,6 +266,7 @@ function startTranscription(channel) {
   streamlinkProc.stdout.pipe(ffmpegProc.stdin);
 
   // VAD state
+  let dataReceived = false;
   let rawBuffer = Buffer.alloc(0);
   let speechBuffer = Buffer.alloc(0);
   let preRollBuffer = Buffer.alloc(0);
@@ -360,6 +364,10 @@ function startTranscription(channel) {
   }
 
   ffmpegProc.stdout.on("data", (data) => {
+    if (!dataReceived) {
+      dataReceived = true;
+      retryCount = 0;
+    }
     rawBuffer = Buffer.concat([rawBuffer, data]);
     while (rawBuffer.length >= FRAME_SIZE) {
       const frame = rawBuffer.subarray(0, FRAME_SIZE);
@@ -380,32 +388,51 @@ function startTranscription(channel) {
 
   streamlinkProc.on("error", (err) => {
     console.error("streamlink spawn error:", err.message);
-    stopTranscription();
-    io.emit("transcription-stopped");
+    onTranscriptionError(channel);
   });
 
   ffmpegProc.on("error", (err) => {
     console.error("ffmpeg spawn error:", err.message);
-    stopTranscription();
-    io.emit("transcription-stopped");
+    onTranscriptionError(channel);
   });
 
   streamlinkProc.on("close", () => {
-    if (transcription) {
-      stopTranscription();
-      io.emit("transcription-stopped");
-    }
+    onTranscriptionError(channel);
   });
 
   transcription = { streamlink: streamlinkProc, ffmpeg: ffmpegProc, cleanup };
 }
 
-function stopTranscription() {
+function killTranscription() {
   if (!transcription) return;
   if (transcription.cleanup) transcription.cleanup();
   try { transcription.streamlink.kill(); } catch (e) {}
   try { transcription.ffmpeg.kill(); } catch (e) {}
   transcription = null;
+}
+
+function stopTranscription() {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  retryCount = 0;
+  killTranscription();
+}
+
+function onTranscriptionError(channel) {
+  if (!transcription) return;
+  killTranscription();
+  if (retryCount < MAX_RETRIES) {
+    const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+    retryCount++;
+    console.log(`Retrying transcription in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`);
+    retryTimer = setTimeout(() => startTranscription(channel), delay);
+  } else {
+    retryCount = 0;
+    console.error("Transcription max retries exceeded");
+    io.emit("transcription-stopped");
+  }
 }
 
 app.use(express.static("public"));
