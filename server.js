@@ -210,15 +210,23 @@ function calcRMS(pcmBuffer) {
   return Math.sqrt(sumSq / numSamples);
 }
 
-const SILENCE_THRESHOLD = 300; // 16-bit PCM RMS threshold
+// VAD (Voice Activity Detection) Configuration
+const VAD_SPEECH_THRESHOLD = 300;      // RMS threshold to detect speech
+const VAD_SPEECH_ONSET_FRAMES = 3;     // Consecutive speech frames to confirm onset (~150ms)
+const VAD_SILENCE_DURATION_MS = 800;   // Silence duration to end a speech segment
+const FRAME_DURATION_MS = 50;          // Analysis frame size
+const FRAME_SIZE = 16000 * 2 * (FRAME_DURATION_MS / 1000); // 1600 bytes per frame
+const VAD_SILENCE_FRAMES = Math.ceil(VAD_SILENCE_DURATION_MS / FRAME_DURATION_MS);
+const MIN_CHUNK_DURATION_S = 1;        // Minimum speech chunk duration
+const MAX_CHUNK_DURATION_S = 15;       // Maximum speech chunk duration
+const MIN_CHUNK_BYTES = 16000 * 2 * MIN_CHUNK_DURATION_S;
+const MAX_CHUNK_BYTES = 16000 * 2 * MAX_CHUNK_DURATION_S;
+const PRE_ROLL_MS = 200;              // Pre-roll audio before speech onset
+const PRE_ROLL_BYTES = 16000 * 2 * (PRE_ROLL_MS / 1000);
+const DEBOUNCE_DELAY_MS = 1500;        // Merge transcriptions within this window
 
-async function transcribeChunk(pcmChunk) {
+async function transcribeChunk(pcmChunk, onResult) {
   try {
-    const rms = calcRMS(pcmChunk);
-    if (rms < SILENCE_THRESHOLD) {
-      return; // Skip silent chunks to avoid Whisper hallucinations
-    }
-
     const wavBuffer = createWavBuffer(pcmChunk);
     const file = new File([wavBuffer], "audio.wav", { type: "audio/wav" });
 
@@ -229,17 +237,7 @@ async function transcribeChunk(pcmChunk) {
 
     const text = response.text.trim();
     if (text) {
-      const timestamp = new Date().toISOString();
-      if (currentChannel) {
-        insertTranscription.run(currentChannel, text, timestamp);
-      }
-      const id = ++transcriptionId;
-      io.emit("transcription", {
-        id,
-        text,
-        timestamp,
-      });
-      translateTranscription(id, text);
+      onResult(text);
     }
   } catch (e) {
     console.error("Transcription error:", e.message);
@@ -264,15 +262,109 @@ function startTranscription(channel) {
 
   streamlinkProc.stdout.pipe(ffmpegProc.stdin);
 
-  let buffer = Buffer.alloc(0);
-  const CHUNK_SIZE = 16000 * 2 * 7; // 7 seconds of 16kHz mono 16bit = 224,000 bytes
+  // VAD state
+  let rawBuffer = Buffer.alloc(0);
+  let speechBuffer = Buffer.alloc(0);
+  let preRollBuffer = Buffer.alloc(0);
+  let vadState = "idle"; // "idle" or "speaking"
+  let speechOnsetCount = 0;
+  let silenceFrameCount = 0;
+
+  // Debounce state for merging consecutive transcriptions
+  let pendingTexts = [];
+  let debounceTimer = null;
+
+  function flushPendingTexts() {
+    debounceTimer = null;
+    if (pendingTexts.length === 0) return;
+    const combinedText = pendingTexts.join(" ");
+    pendingTexts = [];
+    const timestamp = new Date().toISOString();
+    if (currentChannel) {
+      insertTranscription.run(currentChannel, combinedText, timestamp);
+    }
+    const id = ++transcriptionId;
+    io.emit("transcription", { id, text: combinedText, timestamp });
+    translateTranscription(id, combinedText);
+  }
+
+  function onTranscriptionResult(text) {
+    pendingTexts.push(text);
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(flushPendingTexts, DEBOUNCE_DELAY_MS);
+  }
+
+  function finalizeChunk() {
+    if (speechBuffer.length >= MIN_CHUNK_BYTES) {
+      transcribeChunk(speechBuffer, onTranscriptionResult);
+    }
+    speechBuffer = Buffer.alloc(0);
+    silenceFrameCount = 0;
+    speechOnsetCount = 0;
+    vadState = "idle";
+  }
+
+  function processFrame(frame) {
+    const rms = calcRMS(frame);
+    const isSpeech = rms >= VAD_SPEECH_THRESHOLD;
+
+    if (vadState === "idle") {
+      // Maintain pre-roll buffer (rolling window)
+      preRollBuffer = Buffer.concat([preRollBuffer, frame]);
+      if (preRollBuffer.length > PRE_ROLL_BYTES) {
+        preRollBuffer = preRollBuffer.subarray(preRollBuffer.length - PRE_ROLL_BYTES);
+      }
+
+      if (isSpeech) {
+        speechOnsetCount++;
+        if (speechOnsetCount >= VAD_SPEECH_ONSET_FRAMES) {
+          vadState = "speaking";
+          // Pre-roll already contains onset frames
+          speechBuffer = Buffer.from(preRollBuffer);
+          preRollBuffer = Buffer.alloc(0);
+          silenceFrameCount = 0;
+        }
+      } else {
+        speechOnsetCount = 0;
+      }
+    } else {
+      // Speaking state
+      speechBuffer = Buffer.concat([speechBuffer, frame]);
+
+      if (isSpeech) {
+        silenceFrameCount = 0;
+      } else {
+        silenceFrameCount++;
+        if (silenceFrameCount >= VAD_SILENCE_FRAMES) {
+          // Sustained silence detected — finalize speech segment
+          finalizeChunk();
+          return;
+        }
+      }
+
+      // Force split at max duration (stay in speaking state for continuity)
+      if (speechBuffer.length >= MAX_CHUNK_BYTES) {
+        transcribeChunk(Buffer.from(speechBuffer), onTranscriptionResult);
+        speechBuffer = Buffer.alloc(0);
+        silenceFrameCount = 0;
+      }
+    }
+  }
+
+  function cleanup() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    flushPendingTexts();
+  }
 
   ffmpegProc.stdout.on("data", (data) => {
-    buffer = Buffer.concat([buffer, data]);
-    while (buffer.length >= CHUNK_SIZE) {
-      const chunk = buffer.subarray(0, CHUNK_SIZE);
-      buffer = buffer.subarray(CHUNK_SIZE);
-      transcribeChunk(chunk);
+    rawBuffer = Buffer.concat([rawBuffer, data]);
+    while (rawBuffer.length >= FRAME_SIZE) {
+      const frame = rawBuffer.subarray(0, FRAME_SIZE);
+      rawBuffer = rawBuffer.subarray(FRAME_SIZE);
+      processFrame(frame);
     }
   });
 
@@ -305,11 +397,12 @@ function startTranscription(channel) {
     }
   });
 
-  transcription = { streamlink: streamlinkProc, ffmpeg: ffmpegProc };
+  transcription = { streamlink: streamlinkProc, ffmpeg: ffmpegProc, cleanup };
 }
 
 function stopTranscription() {
   if (!transcription) return;
+  if (transcription.cleanup) transcription.cleanup();
   try { transcription.streamlink.kill(); } catch (e) {}
   try { transcription.ffmpeg.kill(); } catch (e) {}
   transcription = null;
