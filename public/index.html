@@ -80,51 +80,46 @@
     }
     #btn-stop:hover { background: #c00; }
     .hidden { display: none !important; }
+    #transcription-toggle {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #e67e22;
+      cursor: pointer;
+      user-select: none;
+    }
+    #transcription-toggle input {
+      accent-color: #e67e22;
+      cursor: pointer;
+    }
     #main {
       flex: 1;
       display: flex;
+      flex-direction: column;
       min-height: 0;
     }
-    .pane {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .pane + .pane {
-      border-left: 1px solid #303032;
-    }
-    .pane-header {
-      background: #1a1a1d;
-      padding: 6px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #adadb8;
-      border-bottom: 1px solid #303032;
-    }
-    #pane-transcription .pane-header {
-      color: #e67e22;
-    }
-    #pane-chat .pane-header {
-      color: #bf94ff;
-    }
-    .pane-content {
+    #timeline {
       flex: 1;
       overflow-y: auto;
       padding: 8px 16px;
     }
-    .pane-content::-webkit-scrollbar {
+    #timeline::-webkit-scrollbar {
       width: 6px;
     }
-    .pane-content::-webkit-scrollbar-track {
+    #timeline::-webkit-scrollbar-track {
       background: transparent;
     }
-    .pane-content::-webkit-scrollbar-thumb {
+    #timeline::-webkit-scrollbar-thumb {
       background: #3a3a3d;
       border-radius: 3px;
     }
-    .pane-content::-webkit-scrollbar-thumb:hover {
+    #timeline::-webkit-scrollbar-thumb:hover {
       background: #505053;
+    }
+    #timeline.hide-transcription .transcription {
+      display: none;
     }
     .msg {
       padding: 4px 0;
@@ -157,6 +152,12 @@
       padding: 4px 0;
       line-height: 1.5;
       word-wrap: break-word;
+    }
+    .transcription .label {
+      color: #e67e22;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 6px;
     }
     .transcription .time {
       color: #6b6b7b;
@@ -250,16 +251,13 @@
     <datalist id="channel-list"></datalist>
     <button id="btn-start">開始</button>
     <button id="btn-stop" class="hidden">停止</button>
+    <label id="transcription-toggle">
+      <input type="checkbox" id="toggle-transcription" checked>
+      配信者
+    </label>
   </div>
   <div id="main">
-    <div id="pane-transcription" class="pane">
-      <div class="pane-header">配信者</div>
-      <div id="transcription" class="pane-content"></div>
-    </div>
-    <div id="pane-chat" class="pane">
-      <div class="pane-header">チャット</div>
-      <div id="chat" class="pane-content"></div>
-    </div>
+    <div id="timeline"></div>
   </div>
   <div id="translator">
     <div id="translator-header">
@@ -280,14 +278,18 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const chat = document.getElementById("chat");
-    const transcriptionPane = document.getElementById("transcription");
+    const timeline = document.getElementById("timeline");
     const status = document.getElementById("status");
     const headerChannel = document.getElementById("header-channel");
     const channelInput = document.getElementById("channel-input");
     const btnStart = document.getElementById("btn-start");
     const btnStop = document.getElementById("btn-stop");
+    const toggleTranscription = document.getElementById("toggle-transcription");
     const socket = io();
+
+    toggleTranscription.addEventListener("change", () => {
+      timeline.classList.toggle("hide-transcription", !toggleTranscription.checked);
+    });
 
     function autoScroll(container) {
       const threshold = 100;
@@ -345,8 +347,7 @@
     });
 
     socket.on("channel-joined", (channel) => {
-      chat.innerHTML = "";
-      transcriptionPane.innerHTML = "";
+      timeline.innerHTML = "";
       btnStart.disabled = false;
       setConnectedUI(channel);
       status.textContent = "接続中";
@@ -386,19 +387,19 @@
         `<span class="user">${escapeHtml(data.username)}:</span>` +
         `<span class="text">${escapeHtml(data.message)}</span>`;
 
-      chat.appendChild(div);
-      autoScroll(chat);
+      timeline.appendChild(div);
+      autoScroll(timeline);
     });
 
     socket.on("chat-translation", (data) => {
-      const msgDiv = chat.querySelector(`[data-msg-id="${data.id}"]`);
+      const msgDiv = timeline.querySelector(`[data-msg-id="${data.id}"]`);
       if (!msgDiv) return;
 
       const transDiv = document.createElement("div");
       transDiv.className = "translation";
       transDiv.textContent = data.translation;
       msgDiv.appendChild(transDiv);
-      autoScroll(chat);
+      autoScroll(timeline);
     });
 
     socket.on("transcription", (data) => {
@@ -409,21 +410,22 @@
       const time = new Date(data.timestamp).toLocaleTimeString();
       div.innerHTML =
         `<span class="time">${time}</span>` +
+        `<span class="label">配信者:</span>` +
         `<span class="text">${escapeHtml(data.text)}</span>`;
 
-      transcriptionPane.appendChild(div);
-      autoScroll(transcriptionPane);
+      timeline.appendChild(div);
+      autoScroll(timeline);
     });
 
     socket.on("transcription-translation", (data) => {
-      const div = transcriptionPane.querySelector(`[data-transcription-id="${data.id}"]`);
+      const div = timeline.querySelector(`[data-transcription-id="${data.id}"]`);
       if (!div) return;
 
       const transDiv = document.createElement("div");
       transDiv.className = "translation";
       transDiv.textContent = data.translation;
       div.appendChild(transDiv);
-      autoScroll(transcriptionPane);
+      autoScroll(timeline);
     });
 
     const translateInput = document.getElementById("translate-input");
