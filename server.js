@@ -20,6 +20,7 @@ const translator = createTranslator(ai);
 
 let tmiClient = null;
 let currentChannel = null;
+let currentLanguage = "ja";
 let transcriptionId = 0;
 
 // TTS readout detection
@@ -67,7 +68,7 @@ const transcriber = new Transcriber(openai, {
     }
     const id = ++transcriptionId;
     io.emit("transcription", { id, text, timestamp });
-    translator.translateTranscription(text, currentChannel)
+    translator.translateTranscription(text, currentChannel, currentLanguage)
       .then((translation) => {
         if (translation) io.emit("transcription-translation", { id, translation });
       })
@@ -95,7 +96,7 @@ function createTmiClient(channel) {
     const data = { id, channel: ch, username: tags["display-name"], message, timestamp };
     console.log(`[${ch}] ${data.username}: ${message}`);
     io.emit("chat-message", data);
-    translator.translateChat(data)
+    translator.translateChat(data, currentLanguage)
       .then((translation) => {
         if (translation) io.emit("chat-translation", { id: data.id, translation });
       })
@@ -112,6 +113,7 @@ io.on("connection", (socket) => {
     socket.emit("current-channel", currentChannel);
   }
   socket.emit("channel-list", getChannels.all().map((r) => r.name));
+  socket.emit("current-language", currentLanguage);
 
   socket.on("join-channel", async (channel) => {
     if (!channel || typeof channel !== "string") return;
@@ -145,11 +147,18 @@ io.on("connection", (socket) => {
     text = text.trim();
     if (!text) return;
     try {
-      const result = await translator.translateManual(text);
+      const result = await translator.translateManual(text, currentLanguage);
       socket.emit("manual-translate-result", result);
     } catch (e) {
       console.error("Manual translation error:", e.message);
       socket.emit("manual-translate-result", "翻訳エラー");
+    }
+  });
+
+  socket.on("set-language", (lang) => {
+    if (typeof lang === "string" && lang.trim()) {
+      currentLanguage = lang.trim();
+      io.emit("current-language", currentLanguage);
     }
   });
 

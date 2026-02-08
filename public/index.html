@@ -80,6 +80,19 @@
     }
     #btn-stop:hover { background: #c00; }
     .hidden { display: none !important; }
+    #language-select {
+      background: #0e0e10;
+      border: 1px solid #303032;
+      color: #efeff1;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-left: auto;
+    }
+    #language-select:focus {
+      outline: none;
+      border-color: #bf94ff;
+    }
     #transcription-toggle {
       display: flex;
       align-items: center;
@@ -284,6 +297,18 @@
       <span class="toggle-switch"></span>
       配信者
     </label>
+    <select id="language-select">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="es">Español</option>
+      <option value="pt">Português</option>
+      <option value="fr">Français</option>
+      <option value="de">Deutsch</option>
+      <option value="ru">Русский</option>
+      <option value="th">ไทย</option>
+    </select>
   </div>
   <div id="main">
     <div id="timeline"></div>
@@ -314,7 +339,35 @@
     const btnStart = document.getElementById("btn-start");
     const btnStop = document.getElementById("btn-stop");
     const toggleTranscription = document.getElementById("toggle-transcription");
+    const languageSelect = document.getElementById("language-select");
+    const translatorHint = document.querySelector("#translator-header .hint");
     const socket = io();
+
+    const LANG_HINTS = {
+      ja: "日本語 → 英語 / その他 → 日本語",
+      en: "英語 → 日本語 / その他 → 英語",
+      ko: "한국어 → 英語 / その他 → 한국어",
+      zh: "中文 → 英語 / その他 → 中文",
+      es: "Español → 英語 / その他 → Español",
+      pt: "Português → 英語 / その他 → Português",
+      fr: "Français → 英語 / その他 → Français",
+      de: "Deutsch → 英語 / その他 → Deutsch",
+      ru: "Русский → 英語 / その他 → Русский",
+      th: "ไทย → 英語 / その他 → ไทย",
+    };
+
+    function updateHint(lang) {
+      translatorHint.textContent = (LANG_HINTS[lang] || lang) + " (Enter で翻訳)";
+    }
+
+    languageSelect.addEventListener("change", () => {
+      socket.emit("set-language", languageSelect.value);
+    });
+
+    socket.on("current-language", (lang) => {
+      languageSelect.value = lang;
+      updateHint(lang);
+    });
 
     toggleTranscription.addEventListener("change", () => {
       const enabled = toggleTranscription.checked;

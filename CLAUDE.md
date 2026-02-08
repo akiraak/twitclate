@@ -47,7 +47,8 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - Socket.IOでブラウザとリアルタイム通信
 - チャットメッセージはSQLiteに保存される (翻訳の文脈用)
 - 接続したチャンネル名はSQLiteに保存され、Web UIでサジェスト候補として表示される
-- 非日本語メッセージはGemini 3 Flashで日本語に翻訳 (非同期・ノンブロッキング)
+- 翻訳の基準言語はUIから選択可能 (デフォルト: 日本語)。選択した言語 → 英語 / その他 → 選択言語 に翻訳
+- 非日本語メッセージはGemini 3 Flashで翻訳 (非同期・ノンブロッキング)
 - 翻訳時に直近5分以内のチャット履歴(最大20件)と配信者発言(最大10件)を文脈として送信
 - チャンネル接続時に自動で音声文字起こしを開始 (streamlink → ffmpeg → Whisper API)
 - 音声はVAD (Voice Activity Detection) で発話区間を検出し、動的に1〜15秒のチャンクに分割
@@ -55,16 +56,16 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - Whisper APIへの同時リクエストはセマフォで最大2に制限
 - streamlink/ffmpegのエラー時は指数バックオフで最大5回自動リトライ
 - チャットTTS読み上げの重複排除: 直近30秒のチャットと文字起こしをバイグラム類似度で比較し、TTS読み上げと判定されたものはスキップ
-- 文字起こし結果はSQLiteに保存され、Geminiで翻訳 (日本語 → 英語 / その他 → 日本語)
+- 文字起こし結果はSQLiteに保存され、Geminiで翻訳 (選択言語 → 英語 / その他 → 選択言語)
 - Web UIは単一タイムライン構成 (チャットと配信者の発言を時系列で表示、配信者表示ON/OFF切替可)
-- 画面下部に手動翻訳エリア (日本語 → 英語 / その他 → 日本語)
+- 画面下部に手動翻訳エリア (選択言語 → 英語 / その他 → 選択言語)
 
 ## モジュール設計
 
 - **server.js**: エントリポイント。モジュールの初期化、Socket.IO/TMIイベントの配線、TTS読み上げ検出ロジック
 - **lib/db.js**: DBスキーマ定義とprepared statementsのエクスポート。他モジュールから `require` して使用
 - **lib/audio.js**: 純粋関数 (`createWavBuffer`, `calcRMS`)。外部依存なし
-- **lib/translator.js**: `createTranslator(ai)` ファクトリで生成。`buildContext()` で文脈構築を共通化。翻訳結果の文字列を返すだけでSocket.IOに依存しない
+- **lib/translator.js**: `createTranslator(ai)` ファクトリで生成。`buildContext()` で文脈構築を共通化。翻訳結果の文字列を返すだけでSocket.IOに依存しない。`langCode` 引数で翻訳方向を動的に切替
 - **lib/transcription.js**: `Transcriber` クラス。VAD状態・Whisperセマフォ・リトライ状態をインスタンスにカプセル化。`onTranscription`/`onStopped` コールバックで server.js と疎結合
 
 ## DB スキーマ
@@ -98,6 +99,7 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - `join-channel` (channel: string) — チャンネルに接続
 - `leave-channel` — チャンネルから切断
 - `toggle-transcription` (enabled: boolean) — 配信者文字起こしのON/OFF切替
+- `set-language` (lang: string) — 翻訳基準言語の変更 (ja, en, ko, zh, es, pt, fr, de, ru, th)
 - `manual-translate` (text: string) — 手動翻訳リクエスト
 
 ### サーバー → クライアント
@@ -108,6 +110,7 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - `chat-message` ({id, channel, username, message, timestamp}) — チャットメッセージ
 - `chat-translation` ({id, translation}) — 翻訳結果 (元メッセージのidに紐づく)
 - `channel-list` (string[]) — 保存済みチャンネル候補一覧
+- `current-language` (lang: string) — 現在の翻訳基準言語
 - `transcription` ({id, text, timestamp}) — 音声文字起こし結果
 - `transcription-translation` ({id, translation}) — 文字起こしの翻訳結果
 - `transcription-stopped` — 文字起こしリトライ上限到達による停止通知
