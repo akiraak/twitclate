@@ -10,7 +10,6 @@ const OpenAI = require("openai");
 // --- 起動時の依存チェック ---
 function checkDependencies() {
   const required = [
-    { cmd: "streamlink", args: ["--version"], hint: "pip install streamlink / pipx install streamlink" },
     { cmd: "ffmpeg", args: ["-version"], hint: "sudo apt install ffmpeg" },
   ];
   const missing = [];

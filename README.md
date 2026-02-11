@@ -52,12 +52,10 @@ http://localhost:3000 を開き、チャンネル名を入力して「開始」�
 
 音声文字起こし機能には以下のツールが必要です。起動時に自動チェックされ、未インストールの場合はエラーメッセージとともに終了します。
 
-- [streamlink](https://streamlink.github.io/) — 配信ストリームの取得
 - [ffmpeg](https://ffmpeg.org/) — 音声の抽出・変換
 
 ```bash
 # インストール例 (Ubuntu/Debian)
-pipx install streamlink
 sudo apt install ffmpeg
 ```
 
@@ -69,6 +67,7 @@ lib/db.js              # SQLite スキーマ + クエリ
 lib/audio.js           # 音声ユーティリティ (WAV変換, RMS計算)
 lib/translator.js      # Gemini翻訳 (チャット・文字起こし・手動)
 lib/transcription.js   # 文字起こしパイプライン (VAD・Whisper・リトライ)
+lib/twitch-hls.js      # Twitch HLS URL取得 (GQL API + Usher API)
 public/index.html      # Web UI
 ```
 
@@ -79,4 +78,4 @@ public/index.html      # Web UI
 - SQLite (better-sqlite3)
 - Google Gemini 3 Flash (@google/genai)
 - OpenAI Whisper API (音声文字起こし)
-- streamlink + ffmpeg (配信音声取得)
+- Twitch GQL API + ffmpeg (配信音声取得)

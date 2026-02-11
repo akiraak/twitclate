@@ -9,7 +9,7 @@ Twitchチャットをリアルタイムで監視し、非日本語コメント�
 - **Twitch接続:** tmi.js (IRC経由)
 - **DB:** SQLite (better-sqlite3) — `data.db` に保存
 - **AI翻訳:** Google Gemini 3 Flash (@google/genai)
-- **音声文字起こし:** streamlink + ffmpeg + OpenAI Whisper API
+- **音声文字起こし:** Twitch GQL API + ffmpeg + OpenAI Whisper API
 - **フロントエンド:** Vanilla HTML/CSS/JS (public/index.html 単一ファイル)
 
 ## プロジェクト構成
@@ -20,6 +20,7 @@ lib/db.js              # SQLite スキーマ + prepared statements
 lib/audio.js           # 音声ユーティリティ (createWavBuffer, calcRMS)
 lib/translator.js      # Gemini翻訳 (チャット・文字起こし・手動の3種 + 文脈構築)
 lib/transcription.js   # Transcriberクラス (VAD・Whisper・プロセス管理・リトライ)
+lib/twitch-hls.js      # Twitch HLS URL取得 (GQL API + Usher API)
 public/index.html      # Web UI (HTML/CSS/JS一体型)
 .env                   # 環境変数 (TWITCH_TOKEN, BOT_NAME, GEMINI_API_KEY, OPENAI_API_KEY)
 data.db                # SQLiteデータベース (自動生成)
@@ -50,12 +51,12 @@ npm start  # node server.js — デフォルト http://localhost:3000
 - 翻訳の基準言語はUIから選択可能 (デフォルト: 日本語)。選択した言語 → 英語 / その他 → 選択言語 に翻訳
 - 非日本語メッセージはGemini 3 Flashで翻訳 (非同期・ノンブロッキング)
 - 翻訳時に直近5分以内のチャット履歴(最大20件)と配信者発言(最大10件)を文脈として送信
-- チャンネル接続時に自動で音声文字起こしを開始 (streamlink → ffmpeg → Whisper API)
+- チャンネル接続時に自動で音声文字起こしを開始 (Twitch GQL API → ffmpeg → Whisper API)
 - 音声はVAD (Voice Activity Detection) で発話区間を検出し、動的に1〜15秒のチャンクに分割
 - 連続する文字起こし結果は1.5秒のデバウンスで結合してから翻訳に送信
 - Whisper APIへの同時リクエストはセマフォで最大2に制限
-- 起動時に外部コマンド (streamlink, ffmpeg) と必須環境変数の存在をチェックし、不足時はエラーメッセージを表示して終了
-- streamlink/ffmpegのエラー時は指数バックオフで最大5回自動リトライ
+- 起動時に外部コマンド (ffmpeg) と必須環境変数の存在をチェックし、不足時はエラーメッセージを表示して終了
+- HLS URL取得失敗/ffmpegのエラー時は指数バックオフで最大5回自動リトライ
 - チャットTTS読み上げの重複排除: 直近30秒のチャットと文字起こしをバイグラム類似度で比較し、TTS読み上げと判定されたものはスキップ
 - 文字起こし結果はSQLiteに保存され、Geminiで翻訳 (選択言語 → 英語 / その他 → 選択言語)
 - Web UIは単一タイムライン構成 (チャットと配信者の発言を時系列で表示、配信者表示ON/OFF切替可)
@@ -63,10 +64,11 @@ npm start  # node server.js — デフォルト http://localhost:3000
 
 ## モジュール設計
 
-- **server.js**: エントリポイント。起動時の外部コマンド・環境変数チェック、モジュールの初期化、Socket.IO/TMIイベントの配線、TTS読み上げ検出ロジック
+- **server.js**: エントリポイント。起動時の外部コマンド (ffmpeg) ・環境変数チェック、モジュールの初期化、Socket.IO/TMIイベントの配線、TTS読み上げ検出ロジック
 - **lib/db.js**: DBスキーマ定義とprepared statementsのエクスポート。他モジュールから `require` して使用
 - **lib/audio.js**: 純粋関数 (`createWavBuffer`, `calcRMS`)。外部依存なし
 - **lib/translator.js**: `createTranslator(ai)` ファクトリで生成。`buildContext()` で文脈構築を共通化。翻訳結果の文字列を返すだけでSocket.IOに依存しない。`langCode` 引数で翻訳方向を動的に切替
+- **lib/twitch-hls.js**: `getTwitchAudioUrl(channel)` で Twitch GQL API + Usher API から HLS audio_only URL を取得。外部依存なし (Node.js fetch のみ)
 - **lib/transcription.js**: `Transcriber` クラス。VAD状態・Whisperセマフォ・リトライ状態をインスタンスにカプセル化。`onTranscription`/`onStopped` コールバックで server.js と疎結合
 
 ## DB スキーマ
