@@ -1,7 +1,7 @@
 {
-  "name": "twitch-translato",
+  "name": "twitch-translator",
   "version": "1.0.0",
-  "description": "",
+  "description": "Twitchチャットをリアルタイムで監視し、非日本語コメントをAIで日本語訳するアプリ",
   "main": "electron.js",
   "scripts": {
     "start": "node server.js",
@@ -29,8 +29,11 @@
     "electron-rebuild": "^3.2.9"
   },
   "build": {
-    "appId": "com.twitch-translato.app",
-    "productName": "Twitch Translato",
+    "appId": "com.twitch-translator.app",
+    "productName": "Twitch Translator",
+    "publish": {
+      "provider": "github"
+    },
     "files": [
       "electron.js",
       "server.js",

@@ -23,6 +23,8 @@ lib/translator.js      # Gemini翻訳 (チャット・文字起こし・手動�
 lib/transcription.js   # Transcriberクラス (VAD・Whisper・プロセス管理・リトライ)
 lib/twitch-hls.js      # Twitch HLS URL取得 (GQL API + Usher API)
 public/index.html      # Web UI (HTML/CSS/JS一体型、設定モーダル含む)
+docs/index.html        # ダウンロードサイト (GitHub Pages、日英対応)
+.github/workflows/release.yml  # リリース自動化 (GitHub Actions)
 data.db                # SQLiteデータベース (自動生成)
 ```
 
@@ -45,7 +47,7 @@ dotenv / `.env` ファイルは使用しない。
 | `OPENAI_API_KEY` | OpenAI API キー (Whisper文字起こし用) |
 
 環境変数 `PORT` でサーバーポートを変更可能 (デフォルト: 3000)。
-環境変数 `TWITCH_TRANSLATO_DB_PATH` で DB ファイルパスを変更可能 (Electron では userData に自動設定)。
+環境変数 `TWITCH_TRANSLATOR_DB_PATH` で DB ファイルパスを変更可能 (Electron では userData に自動設定)。
 
 ## アーキテクチャ
 
@@ -136,6 +138,12 @@ dotenv / `.env` ファイルは使用しない。
 - `settings-status` ({configured: boolean, settings: object}) — 設定状態 (接続時 + 保存後に送信)
 - `settings-data` (object) — マスク済み設定値 (get-settings の応答)
 - `settings-error` (message: string) — 設定エラーメッセージ
+
+## リリース
+
+- `v*` タグの push で GitHub Actions が Windows 向けビルドを実行し、GitHub Releases に自動公開
+- `package.json` の `build.publish` に `{ "provider": "github" }` を設定済み (electron-builder が `GH_TOKEN` で Releases にアップロード)
+- ダウンロードサイト: `docs/index.html` (GitHub Pages、日英対応。GitHub API から最新リリースの exe URL を動的取得)
 
 ## コーディング規約
 

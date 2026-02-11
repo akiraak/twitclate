@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitch Translator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0e0e10;
+    color: #efeff1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lang-switch {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .lang-switch button {
+    background: transparent;
+    border: 1px solid #53535f;
+    color: #adadb8;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .lang-switch button.active {
+    border-color: #9147ff;
+    color: #efeff1;
+    background: #9147ff22;
+  }
+
+  .container {
+    text-align: center;
+    padding: 40px 24px;
+    max-width: 600px;
+  }
+
+  .logo {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .description {
+    font-size: 17px;
+    color: #adadb8;
+    line-height: 1.7;
+    margin-bottom: 40px;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #9147ff;
+    color: #fff;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-size: 17px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+
+  .download-btn:hover {
+    background: #772ce8;
+  }
+
+  .download-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .version {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #53535f;
+  }
+
+  .features {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    text-align: left;
+  }
+
+  .feature {
+    background: #18181b;
+    border: 1px solid #26262c;
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .feature-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .feature-desc {
+    font-size: 13px;
+    color: #adadb8;
+    line-height: 1.5;
+  }
+
+  .footer {
+    margin-top: 56px;
+    font-size: 13px;
+    color: #53535f;
+  }
+
+  .footer a {
+    color: #9147ff;
+    text-decoration: none;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 500px) {
+    .features { grid-template-columns: 1fr; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lang-switch">
+  <button id="btn-ja" class="active" onclick="setLang('ja')">JA</button>
+  <button id="btn-en" onclick="setLang('en')">EN</button>
+</div>
+
+<div class="container">
+  <div class="logo">🌐</div>
+  <h1>Twitch Translator</h1>
+
+  <p class="description" id="desc"></p>
+
+  <a id="download-btn" class="download-btn" href="https://github.com/akiraak/twitch-translator/releases/latest">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span id="download-text"></span>
+  </a>
+  <div class="version" id="version-text"></div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-title" id="f1-title"></div>
+      <div class="feature-desc" id="f1-desc"></div>
+    </div>
+    <div class="feature">
+      <div class="feature-title" id="f2-title"></div>
+      <div class="feature-desc" id="f2-desc"></div>
+    </div>
+    <div class="feature">
+      <div class="feature-title" id="f3-title"></div>
+      <div class="feature-desc" id="f3-desc"></div>
+    </div>
+    <div class="feature">
+      <div class="feature-title" id="f4-title"></div>
+      <div class="feature-desc" id="f4-desc"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/akiraak/twitch-translator">GitHub</a>
+  </div>
+</div>
+
+<script>
+const REPO = 'akiraak/twitch-translator';
+
+const i18n = {
+  ja: {
+    desc: 'Twitchチャットをリアルタイムで監視し、多言語コメントをAIで自動翻訳するWindows向けデスクトップアプリです。配信者の音声文字起こし・翻訳にも対応しています。',
+    download: 'Windows版をダウンロード',
+    loading: '最新バージョンを取得中...',
+    fallback: 'ダウンロードページへ',
+    f1: ['リアルタイム翻訳', 'チャットメッセージをGemini AIがリアルタイムで翻訳。10言語に対応。'],
+    f2: ['音声文字起こし', '配信者の音声をWhisper APIで文字起こしし、自動で翻訳。'],
+    f3: ['文脈を考慮', '直近のチャット履歴と配信者の発言を文脈として翻訳精度を向上。'],
+    f4: ['簡単セットアップ', 'インストールしてAPIキーを入力するだけ。すぐに使い始められます。'],
+  },
+  en: {
+    desc: 'A Windows desktop app that monitors Twitch chat in real time and automatically translates multilingual comments with AI. Also supports streamer voice transcription and translation.',
+    download: 'Download for Windows',
+    loading: 'Fetching latest version...',
+    fallback: 'Go to downloads',
+    f1: ['Real-time Translation', 'Gemini AI translates chat messages in real time. Supports 10 languages.'],
+    f2: ['Voice Transcription', "Transcribes the streamer's voice with Whisper API and translates automatically."],
+    f3: ['Context-Aware', 'Uses recent chat history and streamer speech as context for better translations.'],
+    f4: ['Easy Setup', 'Just install and enter your API keys. Ready to use in minutes.'],
+  }
+};
+
+let currentLang = navigator.language.startsWith('ja') ? 'ja' : 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-ja').classList.toggle('active', lang === 'ja');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+  render();
+}
+
+function render() {
+  const t = i18n[currentLang];
+  document.getElementById('desc').textContent = t.desc;
+  document.getElementById('download-text').textContent = t.download;
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('f' + i + '-title').textContent = t['f' + i][0];
+    document.getElementById('f' + i + '-desc').textContent = t['f' + i][1];
+  }
+}
+
+async function fetchLatestRelease() {
+  const t = i18n[currentLang];
+  document.getElementById('version-text').textContent = t.loading;
+  try {
+    const res = await fetch('https://api.github.com/repos/' + REPO + '/releases/latest');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const exe = data.assets.find(function(a) { return a.name.endsWith('.exe'); });
+    if (exe) {
+      document.getElementById('download-btn').href = exe.browser_download_url;
+    }
+    document.getElementById('version-text').textContent = data.tag_name;
+  } catch (e) {
+    document.getElementById('version-text').textContent = '';
+  }
+}
+
+setLang(currentLang);
+fetchLatestRelease();
+</script>
+</body>
+</html>

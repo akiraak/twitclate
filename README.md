@@ -43,6 +43,10 @@ http://localhost:3000 を開き、初回起動時に表示される設定モー�
 
 設定はSQLiteに保存され、次回起動時に自動で読み込まれます。
 
+## ダウンロード
+
+[ダウンロードページ](https://akiraak.github.io/twitch-translator/) から最新の Windows 版インストーラーを取得できます。
+
 ## Electron デスクトップアプリ
 
 ```bash
@@ -55,6 +59,15 @@ npm run dist:win
 
 ビルドされたアプリでは設定がユーザーデータディレクトリに保存されます。
 
+## リリース
+
+`v*` タグを push すると GitHub Actions が自動で Windows 向けビルドを実行し、GitHub Releases に公開します。
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## プロジェクト構成
 
 ```
@@ -66,6 +79,8 @@ lib/translator.js      # Gemini翻訳 (チャット・文字起こし・手動)
 lib/transcription.js   # 文字起こしパイプライン (VAD・Whisper・リトライ)
 lib/twitch-hls.js      # Twitch HLS URL取得 (GQL API + Usher API)
 public/index.html      # Web UI (設定モーダル含む)
+docs/index.html        # ダウンロードサイト (GitHub Pages)
+.github/workflows/release.yml  # リリース自動化 (GitHub Actions)
 ```
 
 ## 技術スタック

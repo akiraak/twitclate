@@ -55,8 +55,8 @@ async function createWindow(port) {
 app.on("ready", async () => {
   try {
     log("app ready — loading server");
-    process.env.TWITCH_TRANSLATO_DB_PATH = path.join(app.getPath("userData"), "data.db");
-    log(`DB path: ${process.env.TWITCH_TRANSLATO_DB_PATH}`);
+    process.env.TWITCH_TRANSLATOR_DB_PATH = path.join(app.getPath("userData"), "data.db");
+    log(`DB path: ${process.env.TWITCH_TRANSLATOR_DB_PATH}`);
     const { startServer } = require("./server");
     log("server module loaded");
     const port = await startServer();
