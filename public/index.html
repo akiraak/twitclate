@@ -61,12 +61,6 @@
       align-items: center;
       gap: 8px;
     }
-    .controls-divider {
-      width: 1px;
-      height: 20px;
-      background: #303032;
-      margin: 0 4px;
-    }
     #channel-input {
       background: #0e0e10;
       border: 1px solid #303032;
@@ -109,13 +103,15 @@
     #btn-stop:hover { background: #c00; }
     .hidden { display: none !important; }
     #language-select {
+      width: 100%;
       background: #0e0e10;
       border: 1px solid #303032;
       color: #efeff1;
-      padding: 6px 10px;
+      padding: 8px 10px;
       border-radius: 4px;
       font-size: 14px;
-      margin-left: auto;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     #language-select:focus {
       outline: none;
@@ -125,16 +121,17 @@
     #transcription-toggle {
       display: flex;
       align-items: center;
-      gap: 8px;
       font-size: 13px;
       font-weight: 600;
-      color: #adadb8;
+      color: #dedee3;
       cursor: pointer;
       user-select: none;
-      margin-left: 8px;
+    }
+    #transcription-toggle .toggle-switch {
+      margin-left: auto;
     }
     #transcription-toggle.active {
-      color: #e67e22;
+      color: #dedee3;
     }
     #transcription-toggle input {
       display: none;
@@ -351,7 +348,7 @@
       background: none;
       border: none;
       color: #adadb8;
-      font-size: 20px;
+      font-size: 26px;
       cursor: pointer;
       padding: 4px 8px;
       line-height: 1;
@@ -523,24 +520,6 @@
     <datalist id="channel-list"></datalist>
     <button id="btn-start">開始</button>
     <button id="btn-stop" class="hidden">停止</button>
-    <div class="controls-divider"></div>
-    <label id="transcription-toggle" class="active">
-      <input type="checkbox" id="toggle-transcription" checked>
-      <span class="toggle-switch"></span>
-      配信者
-    </label>
-    <select id="language-select">
-      <option value="ja">日本語</option>
-      <option value="en">English</option>
-      <option value="ko">한국어</option>
-      <option value="zh">中文</option>
-      <option value="es">Español</option>
-      <option value="pt">Português</option>
-      <option value="fr">Français</option>
-      <option value="de">Deutsch</option>
-      <option value="ru">Русский</option>
-      <option value="th">ไทย</option>
-    </select>
   </div>
   <div id="main">
     <div id="timeline"></div>
@@ -590,6 +569,29 @@
         <input type="password" id="setting-openai-key" placeholder="sk-...">
       </div>
       <div id="settings-error"></div>
+      <hr class="settings-divider">
+      <div class="settings-field">
+        <label>翻訳先の言語</label>
+        <select id="language-select">
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+          <option value="ko">한국어</option>
+          <option value="zh">中文</option>
+          <option value="es">Español</option>
+          <option value="pt">Português</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="ru">Русский</option>
+          <option value="th">ไทย</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label id="transcription-toggle" class="active">
+          配信者の音声文字起こし
+          <input type="checkbox" id="toggle-transcription" checked>
+          <span class="toggle-switch"></span>
+        </label>
+      </div>
       <hr class="settings-divider">
       <div id="settings-danger">
         <button id="settings-clear-data">すべてのデータを削除</button>
