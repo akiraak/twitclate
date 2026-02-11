@@ -16,14 +16,20 @@
     }
     header {
       background: #18181b;
-      padding: 12px 20px;
+      padding: 10px 20px;
       border-bottom: 1px solid #303032;
       font-size: 18px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+    #header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     #header-channel {
       color: #bf94ff;
-      margin-left: 8px;
       text-decoration: none;
     }
     #header-channel:hover {
@@ -33,16 +39,33 @@
       font-size: 12px;
       font-weight: 400;
       color: #adadb8;
-      margin-left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    #status::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #adadb8;
     }
     #status.connected { color: #00e676; }
+    #status.connected::before { background: #00e676; }
     #controls {
-      background: #18181b;
+      background: #1a1a1d;
       padding: 8px 20px;
       border-bottom: 1px solid #303032;
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+    .controls-divider {
+      width: 1px;
+      height: 20px;
+      background: #303032;
+      margin: 0 4px;
     }
     #channel-input {
       background: #0e0e10;
@@ -51,7 +74,9 @@
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 14px;
-      width: 200px;
+      flex: 1;
+      min-width: 120px;
+      max-width: 300px;
     }
     #channel-input:focus {
       outline: none;
@@ -315,16 +340,20 @@
       content: "ここに翻訳結果が表示されます";
       color: #6b6b7b;
     }
+    #header-right {
+      margin-left: auto;
+    }
     #btn-settings {
       background: none;
       border: none;
       color: #adadb8;
       font-size: 20px;
       cursor: pointer;
-      padding: 0 4px;
+      padding: 4px 8px;
       line-height: 1;
+      border-radius: 4px;
     }
-    #btn-settings:hover { color: #efeff1; }
+    #btn-settings:hover { color: #efeff1; background: rgba(255,255,255,0.1); }
     #settings-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -470,13 +499,21 @@
 </head>
 <body>
   <header>
-    Twitch Translator<a id="header-channel" href="#" target="_blank" rel="noopener"></a><span id="status">待機中</span><button id="btn-settings" title="設定">&#9881;</button>
+    <div id="header-left">
+      Twitch Translator
+      <a id="header-channel" href="#" target="_blank" rel="noopener"></a>
+      <span id="status">待機中</span>
+    </div>
+    <div id="header-right">
+      <button id="btn-settings" title="設定">&#9881;</button>
+    </div>
   </header>
   <div id="controls">
     <input type="text" id="channel-input" placeholder="channel name" list="channel-list" autocomplete="off">
     <datalist id="channel-list"></datalist>
     <button id="btn-start">開始</button>
     <button id="btn-stop" class="hidden">停止</button>
+    <div class="controls-divider"></div>
     <label id="transcription-toggle" class="active">
       <input type="checkbox" id="toggle-transcription" checked>
       <span class="toggle-switch"></span>
