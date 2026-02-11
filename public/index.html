@@ -370,6 +370,29 @@
       font-size: 13px;
       margin-top: 8px;
     }
+    .settings-divider {
+      border: none;
+      border-top: 1px solid #303032;
+      margin: 20px 0 16px;
+    }
+    #settings-danger {
+      display: flex;
+      justify-content: flex-end;
+    }
+    #settings-clear-data {
+      background: transparent;
+      color: #eb0400;
+      border: 1px solid #eb0400;
+      border-radius: 4px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #settings-clear-data:hover {
+      background: #eb0400;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -439,6 +462,10 @@
         <input type="password" id="setting-openai-key" placeholder="sk-...">
       </div>
       <div id="settings-error"></div>
+      <hr class="settings-divider">
+      <div id="settings-danger">
+        <button id="settings-clear-data">すべてのデータを削除</button>
+      </div>
       <div id="settings-actions">
         <button id="settings-cancel">キャンセル</button>
         <button id="settings-save">保存</button>
@@ -736,6 +763,15 @@
     socket.on("settings-error", (msg) => {
       settingsError.textContent = msg;
       settingsSave.disabled = false;
+    });
+
+    document.getElementById("settings-clear-data").addEventListener("click", () => {
+      if (!confirm("すべてのデータが削除されます。よろしいですか？")) return;
+      socket.emit("clear-all-data");
+    });
+
+    socket.on("data-cleared", () => {
+      timeline.innerHTML = "";
     });
 
     // currentChannel の変数をトラック

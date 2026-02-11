@@ -8,8 +8,14 @@ const { GoogleGenAI } = require("@google/genai");
 const OpenAI = require("openai");
 
 // --- 起動時の依存チェック (ffmpeg のみ) ---
+function resolveFfmpegPath() {
+  try {
+    return execFileSync("which", ["ffmpeg"], { encoding: "utf8" }).trim();
+  } catch {}
+  return require("ffmpeg-static").replace("app.asar", "app.asar.unpacked");
+}
 function checkDependencies() {
-  const ffmpegPath = require("ffmpeg-static").replace("app.asar", "app.asar.unpacked");
+  const ffmpegPath = resolveFfmpegPath();
   try {
     execFileSync(ffmpegPath, ["-version"], { stdio: "ignore" });
   } catch {
@@ -18,7 +24,7 @@ function checkDependencies() {
 }
 checkDependencies();
 
-const { upsertChannel, getChannels, insertMessage, insertTranscription, getRecentMessages, getSetting, upsertSetting } = require("./lib/db");
+const { upsertChannel, getChannels, insertMessage, insertTranscription, getRecentMessages, getSetting, upsertSetting, clearAllData } = require("./lib/db");
 const { createTranslator } = require("./lib/translator");
 const { Transcriber } = require("./lib/transcription");
 
@@ -228,6 +234,38 @@ io.on("connection", (socket) => {
     } catch (e) {
       console.error("Settings initialization error:", e);
       socket.emit("settings-error", `初期化エラー: ${e.message}`);
+    }
+  });
+
+  socket.on("clear-all-data", async () => {
+    try {
+      // 接続中のチャンネルを切断
+      if (transcriber) transcriber.stop();
+      if (tmiClient) {
+        try { await tmiClient.disconnect(); } catch (e) {}
+        tmiClient = null;
+        currentChannel = null;
+      }
+
+      // DB の全データを削除
+      clearAllData();
+
+      // サービス状態をリセット
+      ai = null;
+      openai = null;
+      translator = null;
+      transcriber = null;
+      isInitialized = false;
+
+      // 全クライアントに通知
+      io.emit("channel-left");
+      io.emit("channel-list", []);
+      io.emit("settings-status", { configured: false, settings: getMaskedSettings() });
+      socket.emit("data-cleared");
+      console.log("All data cleared");
+    } catch (e) {
+      console.error("Clear data error:", e);
+      socket.emit("settings-error", `データ削除エラー: ${e.message}`);
     }
   });
 
