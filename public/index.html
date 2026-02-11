@@ -317,11 +317,50 @@
       margin-bottom: 12px;
     }
     .settings-field label {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: 13px;
-      color: #adadb8;
+      color: #dedee3;
       margin-bottom: 4px;
     }
+    .settings-info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #dedee3;
+      background: transparent;
+      color: #dedee3;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .settings-info-btn:hover { border-color: #bf94ff; color: #bf94ff; }
+    .settings-info-link {
+      font-size: 11px;
+      color: #bf94ff;
+      text-decoration: none;
+      margin-left: auto;
+    }
+    .settings-info-link:hover { text-decoration: underline; }
+    .settings-info-desc {
+      display: none;
+      font-size: 12px;
+      color: #c8c8d0;
+      background: #1a1a1d;
+      border: 1px solid #303032;
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+    .settings-info-desc.open { display: block; }
     .settings-field input {
       width: 100%;
       background: #0e0e10;
@@ -446,19 +485,23 @@
     <div id="settings-modal">
       <h2>設定</h2>
       <div class="settings-field">
-        <label for="setting-twitch-token">Twitch OAuth トークン</label>
+        <label for="setting-twitch-token">Twitch OAuth トークン<button class="settings-info-btn" data-info="twitch-token">i</button><a class="settings-info-link" href="https://twitchapps.com/tmi/" target="_blank" rel="noopener">トークンを取得</a></label>
+        <div class="settings-info-desc" id="info-twitch-token">Twitchチャットに接続するためのOAuthトークンです。「oauth:」で始まる文字列を入力してください。上のリンクからTwitchアカウントで認証すると取得できます。</div>
         <input type="password" id="setting-twitch-token" placeholder="oauth:...">
       </div>
       <div class="settings-field">
-        <label for="setting-bot-name">Twitch Bot ユーザー名</label>
+        <label for="setting-bot-name">Twitch Bot ユーザー名<button class="settings-info-btn" data-info="bot-name">i</button></label>
+        <div class="settings-info-desc" id="info-bot-name">Twitchチャットに接続する際に使用するユーザー名です。OAuthトークンを取得したTwitchアカウントのユーザー名を入力してください。</div>
         <input type="text" id="setting-bot-name" placeholder="bot_username">
       </div>
       <div class="settings-field">
-        <label for="setting-gemini-key">Gemini API キー</label>
+        <label for="setting-gemini-key">Gemini API キー<button class="settings-info-btn" data-info="gemini-key">i</button><a class="settings-info-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">キーを取得</a></label>
+        <div class="settings-info-desc" id="info-gemini-key">Google Gemini APIのキーです。チャットや文字起こしの翻訳に使用します。Google AI Studioから無料で取得できます。</div>
         <input type="password" id="setting-gemini-key" placeholder="AIza...">
       </div>
       <div class="settings-field">
-        <label for="setting-openai-key">OpenAI API キー</label>
+        <label for="setting-openai-key">OpenAI API キー<button class="settings-info-btn" data-info="openai-key">i</button><a class="settings-info-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">キーを取得</a></label>
+        <div class="settings-info-desc" id="info-openai-key">OpenAI APIのキーです。配信者の音声文字起こし (Whisper) に使用します。OpenAIのダッシュボードから取得できます。文字起こし機能を使わない場合は空欄でも動作します。</div>
         <input type="password" id="setting-openai-key" placeholder="sk-...">
       </div>
       <div id="settings-error"></div>
@@ -711,6 +754,15 @@
     function closeSettings() {
       settingsOverlay.classList.add("hidden");
     }
+
+    document.querySelectorAll(".settings-info-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const id = "info-" + btn.dataset.info;
+        const desc = document.getElementById(id);
+        if (desc) desc.classList.toggle("open");
+      });
+    });
 
     btnSettings.addEventListener("click", openSettings);
 
