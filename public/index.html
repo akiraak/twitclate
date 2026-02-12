@@ -356,6 +356,117 @@
       content: "・";
       color: #3498db;
     }
+    #analytics {
+      display: flex;
+      flex-direction: column;
+    }
+    #analytics-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-bottom: 2px solid #e74c3c;
+      background: #1a1a1d;
+    }
+    #analytics-header .label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e74c3c;
+    }
+    #analytics-header .hint {
+      font-size: 12px;
+      color: #8a8a96;
+      margin-left: auto;
+    }
+    #analytics-body {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-bottom: 1px solid #303032;
+    }
+    .analytics-section-label {
+      font-size: 12px;
+      color: #8a8a96;
+      margin-bottom: 4px;
+    }
+    .analytics-section-label:not(:first-child) {
+      margin-top: 10px;
+    }
+    #frequency-graph {
+      width: 100%;
+      height: 60px;
+      display: block;
+      border-radius: 4px;
+      background: #141416;
+    }
+    .frequency-legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 3px;
+      font-size: 11px;
+      color: #8a8a96;
+    }
+    .frequency-legend span::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .frequency-legend .legend-chat::before { background: #bf94ff; }
+    .frequency-legend .legend-streamer::before { background: #e67e22; }
+    #chat-speed-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #efeff1;
+    }
+    #chat-speed-value .unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: #8a8a96;
+      margin-left: 4px;
+    }
+    .meter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .meter-label {
+      font-size: 13px;
+      color: #adadb8;
+      width: 42px;
+      flex-shrink: 0;
+    }
+    .meter-bar-track {
+      flex: 1;
+      height: 10px;
+      background: #2a2a2d;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .meter-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.6s ease, background 0.6s ease;
+      width: 0%;
+    }
+    .meter-bar-fill.tension { background: #bf94ff; }
+    .meter-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #efeff1;
+      width: 18px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .atmosphere-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #8a8a96;
+      margin-top: 2px;
+    }
     #translator {
       display: flex;
       flex-direction: column;
@@ -624,6 +735,43 @@
         </div>
         <div id="topic-summary-body">
           <span class="placeholder">チャンネルに接続するとトピックが表示されます</span>
+        </div>
+      </div>
+      <div id="analytics">
+        <div id="analytics-header">
+          <span class="label">アナリティクス</span>
+          <span class="hint">自動更新</span>
+        </div>
+        <div id="analytics-body">
+          <div class="analytics-section-label">メッセージ頻度 (直近5分)</div>
+          <canvas id="frequency-graph"></canvas>
+          <div class="frequency-legend">
+            <span class="legend-chat">チャット</span>
+            <span class="legend-streamer">配信者</span>
+          </div>
+
+          <div class="analytics-section-label">チャット速度</div>
+          <div id="chat-speed-value">0<span class="unit">/ 分</span></div>
+
+          <div class="analytics-section-label">盛り上がり度</div>
+          <div class="meter-row">
+            <span class="meter-label">配信者</span>
+            <div class="meter-bar-track"><div class="meter-bar-fill tension" id="meter-streamer"></div></div>
+            <span class="meter-value" id="meter-streamer-val">-</span>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">視聴者</span>
+            <div class="meter-bar-track"><div class="meter-bar-fill tension" id="meter-viewer"></div></div>
+            <span class="meter-value" id="meter-viewer-val">-</span>
+          </div>
+
+          <div class="analytics-section-label">チャット雰囲気</div>
+          <div class="meter-row">
+            <span class="meter-label" style="width:auto">平和</span>
+            <div class="meter-bar-track"><div class="meter-bar-fill" id="meter-atmosphere"></div></div>
+            <span class="meter-label" style="width:auto;text-align:right">混沌</span>
+            <span class="meter-value" id="meter-atmosphere-val">-</span>
+          </div>
         </div>
       </div>
       <div id="translator">
@@ -920,6 +1068,141 @@
     socket.on("topic-summary-cleared", () => {
       // トピックの表示は維持する（クリアしない）
     });
+
+    // --- アナリティクス ---
+    const chatTimestamps = [];
+    const streamerTimestamps = [];
+    const frequencyCanvas = document.getElementById("frequency-graph");
+    const frequencyCtx = frequencyCanvas.getContext("2d");
+    const chatSpeedValue = document.getElementById("chat-speed-value");
+    const meterStreamer = document.getElementById("meter-streamer");
+    const meterStreamerVal = document.getElementById("meter-streamer-val");
+    const meterViewer = document.getElementById("meter-viewer");
+    const meterViewerVal = document.getElementById("meter-viewer-val");
+    const meterAtmosphere = document.getElementById("meter-atmosphere");
+    const meterAtmosphereVal = document.getElementById("meter-atmosphere-val");
+
+    socket.on("chat-message", () => {
+      chatTimestamps.push(Date.now());
+    });
+
+    socket.on("transcription", () => {
+      streamerTimestamps.push(Date.now());
+    });
+
+    function purgeOldTimestamps(arr, windowMs) {
+      const cutoff = Date.now() - windowMs;
+      while (arr.length > 0 && arr[0] < cutoff) arr.shift();
+    }
+
+    function drawFrequencyGraph() {
+      const now = Date.now();
+      const windowMs = 5 * 60 * 1000;
+      const bucketMs = 15000;
+      const bucketCount = 20;
+
+      purgeOldTimestamps(chatTimestamps, windowMs);
+      purgeOldTimestamps(streamerTimestamps, windowMs);
+
+      const dpr = window.devicePixelRatio || 1;
+      const rect = frequencyCanvas.getBoundingClientRect();
+      frequencyCanvas.width = rect.width * dpr;
+      frequencyCanvas.height = rect.height * dpr;
+      frequencyCtx.scale(dpr, dpr);
+      const W = rect.width;
+      const H = rect.height;
+
+      frequencyCtx.clearRect(0, 0, W, H);
+
+      const chatBuckets = new Array(bucketCount).fill(0);
+      const streamerBuckets = new Array(bucketCount).fill(0);
+
+      for (const ts of chatTimestamps) {
+        const idx = Math.floor((now - ts) / bucketMs);
+        if (idx >= 0 && idx < bucketCount) chatBuckets[bucketCount - 1 - idx]++;
+      }
+      for (const ts of streamerTimestamps) {
+        const idx = Math.floor((now - ts) / bucketMs);
+        if (idx >= 0 && idx < bucketCount) streamerBuckets[bucketCount - 1 - idx]++;
+      }
+
+      const maxVal = Math.max(1, ...chatBuckets, ...streamerBuckets);
+      const barGroupWidth = W / bucketCount;
+      const barWidth = barGroupWidth * 0.35;
+      const gap = barGroupWidth * 0.05;
+
+      for (let i = 0; i < bucketCount; i++) {
+        const x = i * barGroupWidth;
+        // Chat bar (purple)
+        const chatH = (chatBuckets[i] / maxVal) * (H - 4);
+        frequencyCtx.fillStyle = "#bf94ff";
+        frequencyCtx.fillRect(x + gap, H - chatH, barWidth, chatH);
+        // Streamer bar (orange)
+        const streamerH = (streamerBuckets[i] / maxVal) * (H - 4);
+        frequencyCtx.fillStyle = "#e67e22";
+        frequencyCtx.fillRect(x + gap + barWidth + 1, H - streamerH, barWidth, streamerH);
+      }
+    }
+
+    function updateChatSpeed() {
+      const oneMinAgo = Date.now() - 60000;
+      purgeOldTimestamps(chatTimestamps, 5 * 60 * 1000);
+      const count = chatTimestamps.filter(ts => ts >= oneMinAgo).length;
+      chatSpeedValue.innerHTML = count + '<span class="unit">/ 分</span>';
+    }
+
+    function updateMeter(fillEl, valEl, value, colorFn) {
+      if (value == null) {
+        fillEl.style.width = "0%";
+        valEl.textContent = "-";
+        return;
+      }
+      const pct = ((value - 1) / 9) * 100;
+      fillEl.style.width = pct + "%";
+      if (colorFn) fillEl.style.background = colorFn(value);
+      valEl.textContent = value;
+    }
+
+    function atmosphereColor(value) {
+      // 1=green(peaceful) -> 5=yellow -> 10=red(chaotic)
+      const t = (value - 1) / 9;
+      if (t < 0.5) {
+        const r = Math.round(46 + (241 - 46) * (t * 2));
+        const g = Math.round(204 + (196 - 204) * (t * 2));
+        const b = Math.round(113 + (15 - 113) * (t * 2));
+        return `rgb(${r},${g},${b})`;
+      } else {
+        const r = Math.round(241 + (231 - 241) * ((t - 0.5) * 2));
+        const g = Math.round(196 + (76 - 196) * ((t - 0.5) * 2));
+        const b = Math.round(15 + (60 - 15) * ((t - 0.5) * 2));
+        return `rgb(${r},${g},${b})`;
+      }
+    }
+
+    socket.on("mood-analysis", (data) => {
+      updateMeter(meterStreamer, meterStreamerVal, data.streamer_tension, null);
+      updateMeter(meterViewer, meterViewerVal, data.viewer_tension, null);
+      updateMeter(meterAtmosphere, meterAtmosphereVal, data.atmosphere, atmosphereColor);
+    });
+
+    socket.on("mood-analysis-cleared", () => {
+      updateMeter(meterStreamer, meterStreamerVal, null);
+      updateMeter(meterViewer, meterViewerVal, null);
+      updateMeter(meterAtmosphere, meterAtmosphereVal, null);
+    });
+
+    socket.on("channel-joined", () => {
+      chatTimestamps.length = 0;
+      streamerTimestamps.length = 0;
+      updateMeter(meterStreamer, meterStreamerVal, null);
+      updateMeter(meterViewer, meterViewerVal, null);
+      updateMeter(meterAtmosphere, meterAtmosphereVal, null);
+    });
+
+    setInterval(() => {
+      drawFrequencyGraph();
+      updateChatSpeed();
+    }, 5000);
 
     const translateInput = document.getElementById("translate-input");
     const translateOutput = document.getElementById("translate-output");

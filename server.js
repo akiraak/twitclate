@@ -123,6 +123,59 @@ function stopSummaryTimer() {
   io.emit("topic-summary-cleared");
 }
 
+// --- ムード分析 ---
+let moodActivityCount = 0;
+let moodTimer = null;
+let lastMoodData = null;
+let moodRunning = false;
+
+const MOOD_INTERVAL = 30000;
+const MOOD_FORCE_COUNT = 8;
+
+async function runMoodAnalysis() {
+  if (moodRunning || !translator || !currentChannel) return;
+  moodRunning = true;
+  moodActivityCount = 0;
+  try {
+    const mood = await translator.analyzeMood(currentChannel, currentLanguage);
+    if (mood) {
+      lastMoodData = mood;
+      io.emit("mood-analysis", mood);
+    }
+  } catch (e) {
+    console.error("Mood analysis error:", e.message);
+  } finally {
+    moodRunning = false;
+  }
+}
+
+function onMoodActivity() {
+  moodActivityCount++;
+  if (moodActivityCount >= MOOD_FORCE_COUNT) {
+    runMoodAnalysis();
+  }
+}
+
+function startMoodTimer() {
+  stopMoodTimer();
+  moodActivityCount = 0;
+  lastMoodData = null;
+  moodTimer = setInterval(() => {
+    if (moodActivityCount < 1) return;
+    runMoodAnalysis();
+  }, MOOD_INTERVAL);
+}
+
+function stopMoodTimer() {
+  if (moodTimer) {
+    clearInterval(moodTimer);
+    moodTimer = null;
+  }
+  moodActivityCount = 0;
+  lastMoodData = null;
+  io.emit("mood-analysis-cleared");
+}
+
 // TTS readout detection
 const TTS_WINDOW_SECONDS = 30;
 const TTS_SIMILARITY_THRESHOLD = 0.5;
@@ -177,6 +230,7 @@ function initializeServices(settings) {
       const id = ++transcriptionId;
       io.emit("transcription", { id, text, timestamp });
       onSummaryActivity();
+      onMoodActivity();
       translator.correctTranscription(text, currentChannel)
         .then((corrected) => {
           if (corrected && corrected !== text) {
@@ -227,6 +281,7 @@ function createTmiClient(channel) {
     console.log(`[${ch}] ${data.username}: ${message}`);
     io.emit("chat-message", data);
     onSummaryActivity();
+    onMoodActivity();
     translator.translateChat(data, currentLanguage)
       .then((translation) => {
         if (translation) io.emit("chat-translation", { id: data.id, translation });
@@ -247,6 +302,9 @@ io.on("connection", (socket) => {
     socket.emit("current-channel", currentChannel);
     if (lastSummaryText) {
       socket.emit("topic-summary", lastSummaryText);
+    }
+    if (lastMoodData) {
+      socket.emit("mood-analysis", lastMoodData);
     }
   }
   socket.emit("channel-list", getChannels.all().map((r) => r.name));
@@ -299,6 +357,7 @@ io.on("connection", (socket) => {
     try {
       // 接続中のチャンネルを切断
       stopSummaryTimer();
+      stopMoodTimer();
       if (transcriber) transcriber.stop();
       if (tmiClient) {
         try { await tmiClient.disconnect(); } catch (e) {}
@@ -352,6 +411,7 @@ io.on("connection", (socket) => {
       io.emit("channel-joined", channel);
       io.emit("channel-list", getChannels.all().map((r) => r.name));
       startSummaryTimer();
+      startMoodTimer();
       transcriber.start(channel).catch((e) => console.error("Transcriber start error:", e));
     } catch (e) {
       console.error(`Failed to connect to #${channel}:`, e);
@@ -395,6 +455,7 @@ io.on("connection", (socket) => {
 
   socket.on("leave-channel", async () => {
     stopSummaryTimer();
+    stopMoodTimer();
     if (transcriber) transcriber.stop();
     if (tmiClient) {
       try { await tmiClient.disconnect(); } catch (e) {}
