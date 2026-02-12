@@ -541,7 +541,7 @@
     <button id="btn-start">開始</button>
     <button id="btn-stop" class="hidden">停止</button>
     <a id="header-channel" href="#" target="_blank" rel="noopener"></a>
-    <span id="status">待機中</span>
+    <span id="status">未接続</span>
   </div>
   <div id="content">
     <div id="main" class="idle">
@@ -709,7 +709,7 @@
     });
 
     socket.on("connect", () => {
-      status.textContent = "待機中";
+      status.textContent = "未接続";
       status.className = "";
     });
 
@@ -741,7 +741,7 @@
       setDisconnectedUI();
       timelinePlaceholder.classList.remove("hidden");
       document.getElementById("main").classList.add("idle");
-      status.textContent = "待機中";
+      status.textContent = "未接続";
       status.className = "";
     });
 
