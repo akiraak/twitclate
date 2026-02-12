@@ -161,6 +161,11 @@
     #transcription-toggle.active .toggle-switch::after {
       transform: translateX(16px);
     }
+    #content {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
     #main {
       flex: 1;
       display: flex;
@@ -273,14 +278,24 @@
       font-size: 14px;
       line-height: 1.4;
     }
-    #translator {
-      border-top: 1px solid #303032;
+    #sidebar {
+      width: 320px;
+      min-width: 240px;
+      border-left: 1px solid #303032;
       background: #18181b;
+      display: flex;
+      flex-direction: column;
+    }
+    #translator {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
     #translator-header {
       display: flex;
       align-items: center;
-      padding: 4px 16px;
+      padding: 6px 12px;
       border-bottom: 1px solid #303032;
       background: #1a1a1d;
     }
@@ -296,31 +311,32 @@
     }
     #translator-body {
       display: flex;
+      flex-direction: column;
     }
     .translate-pane {
-      flex: 1;
       display: flex;
       flex-direction: column;
     }
     .translate-pane + .translate-pane {
-      border-left: 1px solid #303032;
+      border-top: 1px solid #303032;
     }
     .translate-pane-label {
-      padding: 2px 16px;
+      padding: 2px 12px;
       font-size: 11px;
       color: #adadb8;
       background: #141416;
     }
     #translator textarea {
-      flex: 1;
       background: #0e0e10;
       color: #efeff1;
       border: none;
-      padding: 8px 16px;
+      padding: 8px 12px;
       font-family: inherit;
       font-size: 14px;
       resize: none;
-      height: 80px;
+      height: 40px;
+      max-height: 200px;
+      overflow-y: auto;
     }
     #translator textarea:focus {
       outline: none;
@@ -329,13 +345,14 @@
       color: #8a8a96;
     }
     #translate-output {
-      padding: 8px 16px;
+      padding: 8px 12px;
       font-size: 14px;
       line-height: 1.5;
       color: #efeff1;
       background: #141416;
       overflow-y: auto;
-      height: 80px;
+      min-height: 40px;
+      max-height: 200px;
     }
     #translate-output:empty::before {
       content: "ここに翻訳結果が表示されます";
@@ -521,26 +538,30 @@
     <button id="btn-start">開始</button>
     <button id="btn-stop" class="hidden">停止</button>
   </div>
-  <div id="main">
-    <div id="timeline"></div>
-    <div id="timeline-placeholder">
-      <div class="placeholder-title">チャンネル名を入力して「開始」を押してください</div>
-      <div class="placeholder-hint">チャットと配信者の発言がここに表示されます</div>
-    </div>
-  </div>
-  <div id="translator">
-    <div id="translator-header">
-      <span class="label">翻訳</span>
-      <span class="hint">日本語 → 英語 / その他 → 日本語 (Enter で翻訳)</span>
-    </div>
-    <div id="translator-body">
-      <div class="translate-pane">
-        <div class="translate-pane-label">入力</div>
-        <textarea id="translate-input" placeholder="翻訳するテキストを入力"></textarea>
+  <div id="content">
+    <div id="main">
+      <div id="timeline"></div>
+      <div id="timeline-placeholder">
+        <div class="placeholder-title">チャンネル名を入力して「開始」を押してください</div>
+        <div class="placeholder-hint">チャットと配信者の発言がここに表示されます</div>
       </div>
-      <div class="translate-pane">
-        <div class="translate-pane-label">翻訳結果</div>
-        <div id="translate-output"></div>
+    </div>
+    <div id="sidebar">
+      <div id="translator">
+        <div id="translator-header">
+          <span class="label">翻訳</span>
+          <span class="hint">Enter で翻訳</span>
+        </div>
+        <div id="translator-body">
+          <div class="translate-pane">
+            <div class="translate-pane-label">入力</div>
+            <textarea id="translate-input" placeholder="翻訳するテキストを入力"></textarea>
+          </div>
+          <div class="translate-pane">
+            <div class="translate-pane-label">翻訳結果</div>
+            <div id="translate-output"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -625,26 +646,8 @@
     const btnStop = document.getElementById("btn-stop");
     const toggleTranscription = document.getElementById("toggle-transcription");
     const languageSelect = document.getElementById("language-select");
-    const translatorHint = document.querySelector("#translator-header .hint");
     const timelinePlaceholder = document.getElementById("timeline-placeholder");
     const socket = io();
-
-    const LANG_HINTS = {
-      ja: "日本語 → 英語 / その他 → 日本語",
-      en: "英語 → 日本語 / その他 → 英語",
-      ko: "한국어 → 英語 / その他 → 한국어",
-      zh: "中文 → 英語 / その他 → 中文",
-      es: "Español → 英語 / その他 → Español",
-      pt: "Português → 英語 / その他 → Português",
-      fr: "Français → 英語 / その他 → Français",
-      de: "Deutsch → 英語 / その他 → Deutsch",
-      ru: "Русский → 英語 / その他 → Русский",
-      th: "ไทย → 英語 / その他 → ไทย",
-    };
-
-    function updateHint(lang) {
-      translatorHint.textContent = (LANG_HINTS[lang] || lang) + " (Enter で翻訳)";
-    }
 
     languageSelect.addEventListener("change", () => {
       socket.emit("set-language", languageSelect.value);
@@ -652,7 +655,6 @@
 
     socket.on("current-language", (lang) => {
       languageSelect.value = lang;
-      updateHint(lang);
     });
 
     toggleTranscription.addEventListener("change", () => {
@@ -812,6 +814,13 @@
 
     const translateInput = document.getElementById("translate-input");
     const translateOutput = document.getElementById("translate-output");
+
+    function autoResizeTextarea() {
+      translateInput.style.height = "40px";
+      translateInput.style.height = Math.min(translateInput.scrollHeight, 200) + "px";
+    }
+
+    translateInput.addEventListener("input", autoResizeTextarea);
 
     translateInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
