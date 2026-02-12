@@ -11,6 +11,7 @@
       background: #0e0e10;
       color: #efeff1;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -37,7 +38,7 @@
       text-decoration: underline;
     }
     #status {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
       color: #adadb8;
       display: flex;
@@ -123,7 +124,7 @@
     #transcription-toggle {
       display: flex;
       align-items: center;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: #dedee3;
       cursor: pointer;
@@ -215,7 +216,7 @@
       color: #efeff1;
     }
     #timeline-placeholder .placeholder-hint {
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.6;
       color: #adadb8;
     }
@@ -230,7 +231,7 @@
     }
     .msg .time {
       color: #8a8a96;
-      font-size: 12px;
+      font-size: 13px;
       margin-right: 8px;
     }
     .msg .user {
@@ -247,7 +248,7 @@
       padding-left: 8px;
       border-left: 2px solid #9147ff;
       color: #c0c0c8;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.4;
     }
     .transcription {
@@ -263,13 +264,13 @@
     }
     .transcription .label {
       color: #e67e22;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       margin-right: 6px;
     }
     .transcription .time {
       color: #8a8a96;
-      font-size: 12px;
+      font-size: 13px;
       margin-right: 8px;
     }
     .transcription .text {
@@ -281,7 +282,7 @@
       padding-left: 8px;
       border-left: 2px solid #e67e22;
       color: #c0c0c8;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.4;
     }
     #sidebar {
@@ -304,18 +305,18 @@
       background: #1a1a1d;
     }
     #topic-summary-header .label {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: #3498db;
     }
     #topic-summary-header .hint {
-      font-size: 11px;
+      font-size: 12px;
       color: #8a8a96;
       margin-left: auto;
     }
     #topic-summary-body {
       padding: 8px 12px;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.6;
       color: #c0c0c8;
       border-bottom: 1px solid #303032;
@@ -333,7 +334,7 @@
       border-radius: 2px;
     }
     #topic-summary-body .summary-time {
-      font-size: 11px;
+      font-size: 12px;
       color: #8a8a96;
       margin-top: 6px;
     }
@@ -369,12 +370,12 @@
       background: #1a1a1d;
     }
     #translator-header .label {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: #00b894;
     }
     #translator-header .hint {
-      font-size: 11px;
+      font-size: 12px;
       color: #8a8a96;
       margin-left: auto;
     }
@@ -391,7 +392,7 @@
     }
     .translate-pane-label {
       padding: 2px 12px;
-      font-size: 11px;
+      font-size: 12px;
       color: #adadb8;
       background: #18181b;
     }
@@ -401,9 +402,9 @@
       border: none;
       padding: 8px 12px;
       font-family: inherit;
-      font-size: 14px;
+      font-size: 15px;
       resize: none;
-      height: 40px;
+      height: 44px;
       max-height: 200px;
       overflow-y: auto;
     }
@@ -415,7 +416,7 @@
     }
     #translate-output {
       padding: 8px 12px;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.5;
       color: #efeff1;
       background: #0e0e10;
@@ -471,7 +472,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 13px;
+      font-size: 14px;
       color: #dedee3;
       margin-bottom: 4px;
     }
@@ -494,7 +495,7 @@
     }
     .settings-info-btn:hover { border-color: #bf94ff; color: #bf94ff; }
     .settings-info-link {
-      font-size: 11px;
+      font-size: 12px;
       color: #bf94ff;
       text-decoration: none;
       margin-left: auto;
@@ -502,7 +503,7 @@
     .settings-info-link:hover { text-decoration: underline; }
     .settings-info-desc {
       display: none;
-      font-size: 12px;
+      font-size: 13px;
       color: #c8c8d0;
       background: #1a1a1d;
       border: 1px solid #303032;
@@ -618,11 +619,11 @@
     <div id="sidebar">
       <div id="topic-summary">
         <div id="topic-summary-header">
-          <span class="label">話題</span>
+          <span class="label">トピック</span>
           <span class="hint">自動更新</span>
         </div>
         <div id="topic-summary-body">
-          <span class="placeholder">チャンネルに接続すると話題が表示されます</span>
+          <span class="placeholder">チャンネルに接続するとトピックが表示されます</span>
         </div>
       </div>
       <div id="translator">
@@ -917,7 +918,7 @@
     });
 
     socket.on("topic-summary-cleared", () => {
-      // 話題の表示は維持する（クリアしない）
+      // トピックの表示は維持する（クリアしない）
     });
 
     const translateInput = document.getElementById("translate-input");

@@ -74,24 +74,43 @@ let transcriptionId = 0;
 let summaryActivityCount = 0;
 let summaryTimer = null;
 let lastSummaryText = null;
+let summaryRunning = false;
+
+const SUMMARY_INTERVAL = 20000;
+const SUMMARY_FORCE_COUNT = 5;
+
+async function runSummary() {
+  if (summaryRunning || !translator || !currentChannel) return;
+  summaryRunning = true;
+  summaryActivityCount = 0;
+  try {
+    const summary = await translator.summarizeTopic(currentChannel, currentLanguage);
+    if (summary && summary !== lastSummaryText) {
+      lastSummaryText = summary;
+      io.emit("topic-summary", summary);
+    }
+  } catch (e) {
+    console.error("Topic summary error:", e.message);
+  } finally {
+    summaryRunning = false;
+  }
+}
+
+function onSummaryActivity() {
+  summaryActivityCount++;
+  if (summaryActivityCount >= SUMMARY_FORCE_COUNT) {
+    runSummary();
+  }
+}
 
 function startSummaryTimer() {
   stopSummaryTimer();
   summaryActivityCount = 0;
   lastSummaryText = null;
-  summaryTimer = setInterval(async () => {
-    if (summaryActivityCount < 5 || !translator || !currentChannel) return;
-    summaryActivityCount = 0;
-    try {
-      const summary = await translator.summarizeTopic(currentChannel, currentLanguage);
-      if (!summary) return;
-      if (summary === lastSummaryText) return;
-      lastSummaryText = summary;
-      io.emit("topic-summary", summary);
-    } catch (e) {
-      console.error("Topic summary error:", e.message);
-    }
-  }, 30000);
+  summaryTimer = setInterval(() => {
+    if (summaryActivityCount < 1) return;
+    runSummary();
+  }, SUMMARY_INTERVAL);
 }
 
 function stopSummaryTimer() {
@@ -157,7 +176,7 @@ function initializeServices(settings) {
       }
       const id = ++transcriptionId;
       io.emit("transcription", { id, text, timestamp });
-      summaryActivityCount++;
+      onSummaryActivity();
       translator.correctTranscription(text, currentChannel)
         .then((corrected) => {
           if (corrected && corrected !== text) {
@@ -207,7 +226,7 @@ function createTmiClient(channel) {
     const data = { id, channel: ch, username: tags["display-name"], message, timestamp };
     console.log(`[${ch}] ${data.username}: ${message}`);
     io.emit("chat-message", data);
-    summaryActivityCount++;
+    onSummaryActivity();
     translator.translateChat(data, currentLanguage)
       .then((translation) => {
         if (translation) io.emit("chat-translation", { id: data.id, translation });
