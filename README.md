@@ -7,7 +7,7 @@ Twitchチャットをリアルタイムで監視し、非日本語コメント�
 
 - Twitchチャットのリアルタイム表示
 - 非日本語コメントをGemini 3 Flashで自動翻訳
-- 翻訳の基準言語をUIから選択可能 (日本語・英語・韓国語・中国語・スペイン語・ポルトガル語・フランス語・ドイツ語・ロシア語・タイ語)
+- 翻訳の基準言語をUIから選択可能 (22言語対応: 日本語・英語・韓国語・中国語・スペイン語・ポルトガル語・フランス語・ドイツ語・ロシア語・タイ語・トルコ語・イタリア語・ポーランド語・アラビア語・インドネシア語・ベトナム語・ウクライナ語・オランダ語・スウェーデン語・チェコ語・ヒンディー語・マレー語)
 - 配信者の音声をリアルタイムで文字起こし (OpenAI Whisper API)
 - VADベースの発話区間検出で高精度な音声分割
 - 配信者の発言を自動翻訳 (選択言語 → 英語 / その他 → 選択言語)
@@ -89,6 +89,6 @@ docs/index.html        # ダウンロードサイト (GitHub Pages)
 - Electron (デスクトップアプリ)
 - tmi.js (Twitch IRC)
 - SQLite (better-sqlite3)
-- Google Gemini 3 Flash (@google/genai)
-- OpenAI Whisper API (音声文字起こし)
+- Google Gemini 3 Flash (`gemini-3-flash-preview`, @google/genai)
+- OpenAI Whisper API (`gpt-4o-mini-transcribe`, 音声文字起こし)
 - Twitch GQL API + ffmpeg (配信音声取得)

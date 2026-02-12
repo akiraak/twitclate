@@ -8,8 +8,8 @@ Twitchチャットをリアルタイムで監視し、非日本語コメント�
 - **Web:** Express v5 + Socket.IO v4
 - **Twitch接続:** tmi.js (IRC経由)
 - **DB:** SQLite (better-sqlite3) — `data.db` に保存 (Electron では userData ディレクトリ)
-- **AI翻訳:** Google Gemini 3 Flash (@google/genai)
-- **音声文字起こし:** Twitch GQL API + ffmpeg + OpenAI Whisper API
+- **AI翻訳:** Google Gemini 3 Flash (`gemini-3-flash-preview`, @google/genai)
+- **音声文字起こし:** Twitch GQL API + ffmpeg + OpenAI Whisper API (`gpt-4o-mini-transcribe`)
 - **フロントエンド:** Vanilla HTML/CSS/JS (public/index.html 単一ファイル)
 
 ## プロジェクト構成
@@ -66,6 +66,7 @@ dotenv / `.env` ファイルは使用しない。
 - APIキー等の設定はWeb UIの設定モーダルから入力し、SQLiteに保存。設定が揃うとAIクライアントを遅延初期化
 - HLS URL取得失敗/ffmpegのエラー時は指数バックオフで最大5回自動リトライ
 - チャットTTS読み上げの重複排除: 直近30秒のチャットと文字起こしをバイグラム類似度で比較し、TTS読み上げと判定されたものはスキップ
+- 文字起こしのハルシネーション防止: 定型的な誤認識フレーズ (「ご視聴ありがとうございました」等) をブラックリストで除外
 - 文字起こし結果はSQLiteに保存され、Geminiで翻訳 (選択言語 → 英語 / その他 → 選択言語)
 - Web UIは単一タイムライン構成 (チャットと配信者の発言を時系列で表示、配信者表示ON/OFF切替可)
 - 画面下部に手動翻訳エリア (選択言語 → 英語 / その他 → 選択言語)
@@ -75,7 +76,7 @@ dotenv / `.env` ファイルは使用しない。
 - **server.js**: エントリポイント。起動時のffmpegチェック、設定に基づくAIクライアントの遅延初期化、Socket.IO/TMIイベントの配線、TTS読み上げ検出ロジック、設定管理イベント
 - **lib/db.js**: DBスキーマ定義とprepared statementsのエクスポート。他モジュールから `require` して使用
 - **lib/audio.js**: 純粋関数 (`createWavBuffer`, `calcRMS`)。外部依存なし
-- **lib/translator.js**: `createTranslator(ai)` ファクトリで生成。`buildContext()` で文脈構築を共通化。翻訳結果の文字列を返すだけでSocket.IOに依存しない。`langCode` 引数で翻訳方向を動的に切替
+- **lib/translator.js**: `createTranslator(ai)` ファクトリで生成。`buildContext()` で文脈構築を共通化。翻訳結果の文字列を返すだけでSocket.IOに依存しない。`langCode` 引数で翻訳方向を動的に切替。`correctTranscription()` で文字起こしの誤認識補正も担当
 - **lib/twitch-hls.js**: `getTwitchAudioUrl(channel)` で Twitch GQL API + Usher API から HLS audio_only URL を取得。外部依存なし (Node.js fetch のみ)
 - **lib/transcription.js**: `Transcriber` クラス。VAD状態・Whisperセマフォ・リトライ状態をインスタンスにカプセル化。`onTranscription`/`onStopped` コールバックで server.js と疎結合
 
@@ -116,10 +117,11 @@ dotenv / `.env` ファイルは使用しない。
 - `join-channel` (channel: string) — チャンネルに接続
 - `leave-channel` — チャンネルから切断
 - `toggle-transcription` (enabled: boolean) — 配信者文字起こしのON/OFF切替
-- `set-language` (lang: string) — 翻訳基準言語の変更 (ja, en, ko, zh, es, pt, fr, de, ru, th)
+- `set-language` (lang: string) — 翻訳基準言語の変更 (ja, en, ko, zh, es, pt, fr, de, ru, th, tr, it, pl, ar, id, vi, uk, nl, sv, cs, hi, ms)
 - `manual-translate` (text: string) — 手動翻訳リクエスト
 - `get-settings` — マスク済み設定を要求
 - `save-settings` ({TWITCH_TOKEN, BOT_NAME, GEMINI_API_KEY, OPENAI_API_KEY}) — 設定保存 + 再初期化
+- `clear-all-data` — 全データ削除 (設定・チャンネル履歴・メッセージ・文字起こし)
 
 ### サーバー → クライアント
 - `current-channel` (channel) — 接続中のチャンネル (再接続時)
@@ -138,6 +140,7 @@ dotenv / `.env` ファイルは使用しない。
 - `settings-status` ({configured: boolean, settings: object}) — 設定状態 (接続時 + 保存後に送信)
 - `settings-data` (object) — マスク済み設定値 (get-settings の応答)
 - `settings-error` (message: string) — 設定エラーメッセージ
+- `data-cleared` — 全データ削除完了通知
 
 ## リリース
 
