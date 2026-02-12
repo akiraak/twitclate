@@ -51,8 +51,15 @@
   }
 
   .logo {
-    font-size: 48px;
     margin-bottom: 16px;
+  }
+
+  .logo img {
+    width: 80px;  /* アイコンのサイズ（お好みで調整してください） */
+    height: 80px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
   }
 
   h1 {
@@ -153,7 +160,9 @@
 </div>
 
 <div class="container">
-  <div class="logo">🌐</div>
+  <div class="logo">
+    <img src="icon.png" alt="Twitclate Icon">
+  </div>
   <h1>Twitclate</h1>
 
   <p class="description" id="desc"></p>
