@@ -146,6 +146,7 @@ dotenv / `.env` ファイルは使用しない。
 - `topic-summary-cleared` — トピック要約クリア通知
 - `mood-analysis` ({streamer_tension, viewer_tension, atmosphere}) — ムード分析結果 (各1-10)
 - `mood-analysis-cleared` — ムード分析メーターリセット
+- `error-log` ({message, timestamp}) — 処理失敗時のエラーログ (翻訳・文字起こし・要約・ムード分析等)
 - `settings-error` (message: string) — 設定エラーメッセージ
 - `data-cleared` — 全データ削除完了通知
 

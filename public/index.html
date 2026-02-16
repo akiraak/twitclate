@@ -539,6 +539,121 @@
       content: "ここに翻訳結果が表示されます";
       color: #6b6b7b;
     }
+    #error-log {
+      display: flex;
+      flex-direction: column;
+    }
+    #error-log-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-bottom: 2px solid #e74c3c;
+      background: #1a1a1d;
+    }
+    #error-log-header .label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e74c3c;
+    }
+    #error-log-header .badge {
+      background: #e74c3c;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 1px 6px;
+      margin-left: 6px;
+      display: none;
+    }
+    #error-log-header .badge.visible {
+      display: inline;
+    }
+    #error-log-clear {
+      margin-left: auto;
+      background: none;
+      border: 1px solid #505058;
+      color: #adadb8;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #error-log-clear:hover {
+      color: #efeff1;
+      border-color: #adadb8;
+    }
+    #error-log-body {
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #c0c0c8;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #error-log-body::-webkit-scrollbar {
+      width: 4px;
+    }
+    #error-log-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #error-log-body::-webkit-scrollbar-thumb {
+      background: #3a3a3d;
+      border-radius: 2px;
+    }
+    #error-log-body .placeholder {
+      color: #6b6b7b;
+    }
+    #error-log-body .error-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #2a2a2d;
+    }
+    #error-log-body .error-entry:last-child {
+      border-bottom: none;
+    }
+    #error-log-body .error-time {
+      color: #8a8a96;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+    #error-log-body .error-category {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-right: 5px;
+      color: #fff;
+    }
+    #error-log-body .error-category.cat-translation { background: #e67e22; }
+    #error-log-body .error-category.cat-transcription { background: #9b59b6; }
+    #error-log-body .error-category.cat-summary { background: #3498db; }
+    #error-log-body .error-category.cat-mood { background: #2ecc71; }
+    #error-log-body .error-msg {
+      color: #e0a0a0;
+    }
+    #error-log-body .error-detail-toggle {
+      display: inline-block;
+      cursor: pointer;
+      color: #8a8a96;
+      font-size: 11px;
+      margin-left: 4px;
+      user-select: none;
+    }
+    #error-log-body .error-detail-toggle:hover {
+      color: #c0c0c8;
+    }
+    #error-log-body .error-detail {
+      display: none;
+      font-size: 12px;
+      color: #8a8a96;
+      margin-top: 2px;
+      padding-left: 4px;
+      word-break: break-all;
+    }
+    #error-log-body .error-detail.open {
+      display: block;
+    }
     #header-right {
       margin-left: auto;
     }
@@ -700,6 +815,50 @@
       background: #eb0400;
       color: #fff;
     }
+    #error-dialog-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+    }
+    #error-dialog {
+      background: #3a3a3a;
+      border: 1px solid #e74c3c;
+      border-radius: 8px;
+      padding: 24px;
+      width: 360px;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #error-dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e74c3c;
+      margin-bottom: 12px;
+    }
+    #error-dialog-message {
+      font-size: 15px;
+      color: #dedee3;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    #error-dialog-ok {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 32px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #error-dialog-ok:hover {
+      background: #c0392b;
+    }
   </style>
 </head>
 <body>
@@ -790,6 +949,16 @@
           </div>
         </div>
       </div>
+      <div id="error-log">
+        <div id="error-log-header">
+          <span class="label">エラーログ</span>
+          <span class="badge" id="error-log-badge">0</span>
+          <button id="error-log-clear">クリア</button>
+        </div>
+        <div id="error-log-body">
+          <span class="placeholder">エラーはありません</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -860,6 +1029,14 @@
         <button id="settings-cancel">キャンセル</button>
         <button id="settings-save">保存</button>
       </div>
+    </div>
+  </div>
+
+  <div id="error-dialog-overlay" class="hidden">
+    <div id="error-dialog">
+      <div id="error-dialog-title">エラー</div>
+      <div id="error-dialog-message"></div>
+      <button id="error-dialog-ok">OK</button>
     </div>
   </div>
 
@@ -968,9 +1145,22 @@
       status.className = "";
     });
 
+    const errorDialogOverlay = document.getElementById("error-dialog-overlay");
+    const errorDialogMessage = document.getElementById("error-dialog-message");
+    const errorDialogOk = document.getElementById("error-dialog-ok");
+
+    function showErrorDialog(msg) {
+      errorDialogMessage.textContent = msg;
+      errorDialogOverlay.classList.remove("hidden");
+    }
+
+    errorDialogOk.addEventListener("click", () => {
+      errorDialogOverlay.classList.add("hidden");
+    });
+
     socket.on("channel-error", (msg) => {
       btnStart.disabled = false;
-      alert(msg);
+      showErrorDialog(msg);
     });
 
     socket.on("channel-list", (channels) => {
@@ -1233,6 +1423,68 @@
       d.textContent = str;
       return d.innerHTML;
     }
+
+    // --- エラーログ ---
+    const errorLogBody = document.getElementById("error-log-body");
+    const errorLogBadge = document.getElementById("error-log-badge");
+    const errorLogClear = document.getElementById("error-log-clear");
+    const MAX_ERROR_ENTRIES = 50;
+    let errorCount = 0;
+
+    const CATEGORY_LABELS = {
+      translation: "翻訳", transcription: "文字起こし", summary: "要約", mood: "分析",
+    };
+
+    function addErrorLog(data) {
+      const placeholder = errorLogBody.querySelector(".placeholder");
+      if (placeholder) placeholder.remove();
+      const entry = document.createElement("div");
+      entry.className = "error-entry";
+      const time = new Date(data.timestamp);
+      const timeStr = time.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const catLabel = CATEGORY_LABELS[data.category] || data.category || "";
+      const catClass = data.category ? " cat-" + data.category : "";
+      let html = '<span class="error-time">' + timeStr + '</span>';
+      if (catLabel) html += '<span class="error-category' + catClass + '">' + escapeHtml(catLabel) + '</span>';
+      html += '<span class="error-msg">' + escapeHtml(data.message) + '</span>';
+      if (data.detail) {
+        html += '<span class="error-detail-toggle">&#9654;</span>';
+        html += '<div class="error-detail">' + escapeHtml(data.detail) + '</div>';
+      }
+      entry.innerHTML = html;
+      if (data.detail) {
+        const toggle = entry.querySelector(".error-detail-toggle");
+        const detail = entry.querySelector(".error-detail");
+        toggle.addEventListener("click", () => {
+          detail.classList.toggle("open");
+          toggle.innerHTML = detail.classList.contains("open") ? "&#9660;" : "&#9654;";
+        });
+      }
+      errorLogBody.appendChild(entry);
+      while (errorLogBody.querySelectorAll(".error-entry").length > MAX_ERROR_ENTRIES) {
+        errorLogBody.querySelector(".error-entry").remove();
+      }
+      errorCount++;
+      errorLogBadge.textContent = errorCount;
+      errorLogBadge.classList.add("visible");
+      errorLogBody.scrollTop = errorLogBody.scrollHeight;
+    }
+
+    function clearErrorLog() {
+      errorLogBody.innerHTML = '<span class="placeholder">エラーはありません</span>';
+      errorCount = 0;
+      errorLogBadge.classList.remove("visible");
+    }
+
+    errorLogClear.addEventListener("click", clearErrorLog);
+
+    socket.on("error-log", (data) => {
+      addErrorLog(data);
+    });
+
+    socket.on("channel-left", () => {
+      clearErrorLog();
+    });
 
     // --- 設定モーダル ---
     const settingsOverlay = document.getElementById("settings-overlay");
