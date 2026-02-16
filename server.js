@@ -138,6 +138,123 @@ function getErrorMessage(key) {
   return ERROR_MESSAGES[key][currentLanguage] || ERROR_MESSAGES[key].en;
 }
 
+const ERROR_DETAILS = {
+  invalidKey: {
+    ja: "APIキーが無効です。設定画面で正しいキーを入力してください。",
+    en: "Invalid API key. Please enter a valid key in settings.",
+    ko: "API 키가 유효하지 않습니다. 설정에서 올바른 키를 입력하세요.",
+    zh: "API密钥无效。请在设置中输入正确的密钥。",
+    es: "Clave API inválida. Ingrese una clave válida en la configuración.",
+    pt: "Chave API inválida. Insira uma chave válida nas configurações.",
+    fr: "Clé API invalide. Veuillez entrer une clé valide dans les paramètres.",
+    de: "Ungültiger API-Schlüssel. Bitte geben Sie einen gültigen Schlüssel in den Einstellungen ein.",
+    ru: "Недействительный ключ API. Введите правильный ключ в настройках.",
+    th: "คีย์ API ไม่ถูกต้อง กรุณาใส่คีย์ที่ถูกต้องในการตั้งค่า",
+    tr: "Geçersiz API anahtarı. Lütfen ayarlardan geçerli bir anahtar girin.",
+    it: "Chiave API non valida. Inserisci una chiave valida nelle impostazioni.",
+    pl: "Nieprawidłowy klucz API. Wprowadź poprawny klucz w ustawieniach.",
+    ar: "مفتاح API غير صالح. يرجى إدخال مفتاح صحيح في الإعدادات.",
+    id: "Kunci API tidak valid. Masukkan kunci yang valid di pengaturan.",
+    vi: "Khóa API không hợp lệ. Vui lòng nhập khóa đúng trong cài đặt.",
+    uk: "Недійсний ключ API. Введіть правильний ключ у налаштуваннях.",
+    nl: "Ongeldige API-sleutel. Voer een geldige sleutel in bij de instellingen.",
+    sv: "Ogiltig API-nyckel. Ange en giltig nyckel i inställningarna.",
+    cs: "Neplatný klíč API. Zadejte platný klíč v nastavení.",
+    hi: "API कुंजी अमान्य है। कृपया सेटिंग्स में सही कुंजी दर्ज करें।",
+    ms: "Kunci API tidak sah. Sila masukkan kunci yang sah dalam tetapan.",
+  },
+  rateLimited: {
+    ja: "APIのリクエスト制限に達しました。しばらくお待ちください。",
+    en: "API rate limit reached. Please wait a moment.",
+    ko: "API 요청 한도에 도달했습니다. 잠시 기다려 주세요.",
+    zh: "已达到API请求限制。请稍候。",
+    es: "Se alcanzó el límite de solicitudes API. Espere un momento.",
+    pt: "Limite de requisições da API atingido. Aguarde um momento.",
+    fr: "Limite de requêtes API atteinte. Veuillez patienter.",
+    de: "API-Anfragelimit erreicht. Bitte warten Sie einen Moment.",
+    ru: "Достигнут лимит запросов API. Подождите немного.",
+    th: "ถึงขีดจำกัดคำขอ API แล้ว กรุณารอสักครู่",
+    tr: "API istek sınırına ulaşıldı. Lütfen biraz bekleyin.",
+    it: "Limite di richieste API raggiunto. Attendere un momento.",
+    pl: "Osiągnięto limit zapytań API. Proszę chwilę poczekać.",
+    ar: "تم الوصول إلى حد طلبات API. يرجى الانتظار قليلاً.",
+    id: "Batas permintaan API tercapai. Harap tunggu sebentar.",
+    vi: "Đã đạt giới hạn yêu cầu API. Vui lòng đợi một chút.",
+    uk: "Досягнуто ліміт запитів API. Зачекайте трохи.",
+    nl: "API-aanvraaglimiet bereikt. Even geduld.",
+    sv: "API-förfrågningsgräns nådd. Vänta en stund.",
+    cs: "Dosažen limit požadavků API. Počkejte chvíli.",
+    hi: "API अनुरोध सीमा पूरी हो गई। कृपया कुछ देर प्रतीक्षा करें।",
+    ms: "Had permintaan API dicapai. Sila tunggu sebentar.",
+  },
+  serverError: {
+    ja: "APIサーバーでエラーが発生しました。しばらくしてから再試行されます。",
+    en: "API server error. It will be retried shortly.",
+    ko: "API 서버 오류가 발생했습니다. 잠시 후 재시도됩니다.",
+    zh: "API服务器错误。稍后将自动重试。",
+    es: "Error del servidor API. Se reintentará en breve.",
+    pt: "Erro no servidor da API. Será tentado novamente em breve.",
+    fr: "Erreur du serveur API. Une nouvelle tentative sera effectuée.",
+    de: "API-Serverfehler. Es wird in Kürze erneut versucht.",
+    ru: "Ошибка сервера API. Повторная попытка будет выполнена.",
+    th: "เกิดข้อผิดพลาดของเซิร์ฟเวอร์ API จะลองใหม่อีกครั้ง",
+    tr: "API sunucu hatası. Kısa süre içinde yeniden denenecek.",
+    it: "Errore del server API. Verrà riprovato a breve.",
+    pl: "Błąd serwera API. Ponowna próba nastąpi wkrótce.",
+    ar: "خطأ في خادم API. ستتم إعادة المحاولة قريبًا.",
+    id: "Kesalahan server API. Akan dicoba lagi segera.",
+    vi: "Lỗi máy chủ API. Sẽ thử lại sau.",
+    uk: "Помилка сервера API. Повторна спроба буде виконана.",
+    nl: "API-serverfout. Er wordt binnenkort opnieuw geprobeerd.",
+    sv: "API-serverfel. Nytt försök görs snart.",
+    cs: "Chyba serveru API. Bude opakováno.",
+    hi: "API सर्वर में त्रुटि। शीघ्र ही पुनः प्रयास किया जाएगा।",
+    ms: "Ralat pelayan API. Akan dicuba semula sebentar lagi.",
+  },
+  connectionError: {
+    ja: "APIサーバーに接続できません。ネットワークを確認してください。",
+    en: "Cannot connect to API server. Please check your network.",
+    ko: "API 서버에 연결할 수 없습니다. 네트워크를 확인하세요.",
+    zh: "无法连接到API服务器。请检查网络。",
+    es: "No se puede conectar al servidor API. Verifique su red.",
+    pt: "Não foi possível conectar ao servidor da API. Verifique sua rede.",
+    fr: "Impossible de se connecter au serveur API. Vérifiez votre réseau.",
+    de: "Verbindung zum API-Server nicht möglich. Überprüfen Sie Ihr Netzwerk.",
+    ru: "Не удаётся подключиться к серверу API. Проверьте сеть.",
+    th: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ API ได้ กรุณาตรวจสอบเครือข่าย",
+    tr: "API sunucusuna bağlanılamıyor. Ağınızı kontrol edin.",
+    it: "Impossibile connettersi al server API. Controlla la rete.",
+    pl: "Nie można połączyć się z serwerem API. Sprawdź połączenie sieciowe.",
+    ar: "تعذر الاتصال بخادم API. يرجى التحقق من الشبكة.",
+    id: "Tidak dapat terhubung ke server API. Periksa jaringan Anda.",
+    vi: "Không thể kết nối đến máy chủ API. Vui lòng kiểm tra mạng.",
+    uk: "Неможливо підключитися до сервера API. Перевірте мережу.",
+    nl: "Kan geen verbinding maken met de API-server. Controleer uw netwerk.",
+    sv: "Kan inte ansluta till API-servern. Kontrollera ditt nätverk.",
+    cs: "Nelze se připojit k serveru API. Zkontrolujte síť.",
+    hi: "API सर्वर से कनेक्ट नहीं हो पा रहा। कृपया नेटवर्क जांचें।",
+    ms: "Tidak dapat menyambung ke pelayan API. Sila semak rangkaian anda.",
+  },
+};
+
+function formatErrorDetail(e) {
+  const status = e.status;
+  const msg = e.message || "";
+  if (status === 401 || status === 403 || /api.key/i.test(msg) || /auth/i.test(msg)) {
+    return (ERROR_DETAILS.invalidKey[currentLanguage] || ERROR_DETAILS.invalidKey.en);
+  }
+  if (status === 429 || /rate.limit/i.test(msg) || /resource.*exhausted/i.test(msg)) {
+    return (ERROR_DETAILS.rateLimited[currentLanguage] || ERROR_DETAILS.rateLimited.en);
+  }
+  if (status >= 500) {
+    return (ERROR_DETAILS.serverError[currentLanguage] || ERROR_DETAILS.serverError.en);
+  }
+  if (/connection|timeout|timed.out|ECONNREFUSED|ENOTFOUND|fetch failed/i.test(msg)) {
+    return (ERROR_DETAILS.connectionError[currentLanguage] || ERROR_DETAILS.connectionError.en);
+  }
+  return msg;
+}
+
 // --- トピック要約 ---
 let summaryActivityCount = 0;
 let summaryTimer = null;
@@ -159,7 +276,7 @@ async function runSummary() {
     }
   } catch (e) {
     console.error("Topic summary error:", e.message);
-    io.emit("error-log", { category: "summary", message: getErrorMessage("summaryFailed"), detail: e.message, timestamp: new Date().toISOString() });
+    io.emit("error-log", { category: "summary", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
   } finally {
     summaryRunning = false;
   }
@@ -213,7 +330,7 @@ async function runMoodAnalysis() {
     }
   } catch (e) {
     console.error("Mood analysis error:", e.message);
-    io.emit("error-log", { category: "mood", message: getErrorMessage("moodFailed"), detail: e.message, timestamp: new Date().toISOString() });
+    io.emit("error-log", { category: "mood", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
   } finally {
     moodRunning = false;
   }
@@ -314,7 +431,7 @@ function initializeServices(settings) {
         })
         .catch((e) => {
           console.error("Transcription correction/translation error:", e.message);
-          io.emit("error-log", { category: "transcription", message: getErrorMessage("transcriptionTranslateFailed"), detail: e.message, timestamp: new Date().toISOString() });
+          io.emit("error-log", { category: "transcription", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
         });
     },
     onStopped: () => {
@@ -362,7 +479,7 @@ function createTmiClient(channel) {
       })
       .catch((e) => {
         console.error("Translation error:", e.message);
-        io.emit("error-log", { category: "translation", message: getErrorMessage("translationFailed"), detail: e.message, timestamp: new Date().toISOString() });
+        io.emit("error-log", { category: "translation", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
       });
   });
 
@@ -491,7 +608,7 @@ io.on("connection", (socket) => {
       startMoodTimer();
       transcriber.start(channel).catch((e) => {
         console.error("Transcriber start error:", e);
-        io.emit("error-log", { category: "transcription", message: getErrorMessage("transcriptionStartFailed"), detail: e.message, timestamp: new Date().toISOString() });
+        io.emit("error-log", { category: "transcription", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
       });
     } catch (e) {
       console.error(`Failed to connect to #${channel}:`, e);
@@ -529,7 +646,7 @@ io.on("connection", (socket) => {
     if (enabled) {
       transcriber.start(currentChannel).catch((e) => {
         console.error("Transcriber start error:", e);
-        io.emit("error-log", { category: "transcription", message: getErrorMessage("transcriptionStartFailed"), detail: e.message, timestamp: new Date().toISOString() });
+        io.emit("error-log", { category: "transcription", message: formatErrorDetail(e), detail: e.message, timestamp: new Date().toISOString() });
       });
     } else {
       transcriber.stop();

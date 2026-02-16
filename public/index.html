@@ -569,7 +569,6 @@
       display: inline;
     }
     #error-log-clear {
-      margin-left: auto;
       background: none;
       border: 1px solid #505058;
       color: #adadb8;
@@ -652,6 +651,140 @@
       word-break: break-all;
     }
     #error-log-body .error-detail.open {
+      display: block;
+    }
+    #error-log-expand {
+      background: none;
+      border: 1px solid #505058;
+      color: #adadb8;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: auto;
+      margin-right: 6px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #error-log-expand:hover {
+      color: #efeff1;
+      border-color: #adadb8;
+    }
+    #error-log-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+    }
+    #error-log-modal {
+      background: #1f1f23;
+      border: 1px solid #e74c3c;
+      border-radius: 8px;
+      width: 800px;
+      max-width: 90vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #error-log-modal-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 2px solid #e74c3c;
+      background: #1a1a1d;
+      border-radius: 8px 8px 0 0;
+    }
+    #error-log-modal-header .label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e74c3c;
+    }
+    #error-log-modal-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #adadb8;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+    }
+    #error-log-modal-close:hover {
+      color: #efeff1;
+      background: rgba(255,255,255,0.1);
+    }
+    #error-log-modal-body {
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #c0c0c8;
+      overflow-y: auto;
+      flex: 1;
+    }
+    #error-log-modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    #error-log-modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #error-log-modal-body::-webkit-scrollbar-thumb {
+      background: #3a3a3d;
+      border-radius: 3px;
+    }
+    #error-log-modal-body .placeholder {
+      color: #6b6b7b;
+    }
+    #error-log-modal-body .error-entry {
+      padding: 6px 0;
+      border-bottom: 1px solid #2a2a2d;
+    }
+    #error-log-modal-body .error-entry:last-child {
+      border-bottom: none;
+    }
+    #error-log-modal-body .error-time {
+      color: #8a8a96;
+      font-size: 13px;
+      margin-right: 8px;
+    }
+    #error-log-modal-body .error-category {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-right: 6px;
+      color: #fff;
+    }
+    #error-log-modal-body .error-category.cat-translation { background: #e67e22; }
+    #error-log-modal-body .error-category.cat-transcription { background: #9b59b6; }
+    #error-log-modal-body .error-category.cat-summary { background: #3498db; }
+    #error-log-modal-body .error-category.cat-mood { background: #2ecc71; }
+    #error-log-modal-body .error-msg {
+      color: #e0a0a0;
+    }
+    #error-log-modal-body .error-detail-toggle {
+      display: inline-block;
+      cursor: pointer;
+      color: #8a8a96;
+      font-size: 12px;
+      margin-left: 6px;
+      user-select: none;
+    }
+    #error-log-modal-body .error-detail-toggle:hover {
+      color: #c0c0c8;
+    }
+    #error-log-modal-body .error-detail {
+      display: none;
+      font-size: 13px;
+      color: #8a8a96;
+      margin-top: 3px;
+      padding-left: 4px;
+      word-break: break-all;
+    }
+    #error-log-modal-body .error-detail.open {
       display: block;
     }
     #header-right {
@@ -953,6 +1086,7 @@
         <div id="error-log-header">
           <span class="label">エラーログ</span>
           <span class="badge" id="error-log-badge">0</span>
+          <button id="error-log-expand">拡大</button>
           <button id="error-log-clear">クリア</button>
         </div>
         <div id="error-log-body">
@@ -1037,6 +1171,18 @@
       <div id="error-dialog-title">エラー</div>
       <div id="error-dialog-message"></div>
       <button id="error-dialog-ok">OK</button>
+    </div>
+  </div>
+
+  <div id="error-log-overlay" class="hidden">
+    <div id="error-log-modal">
+      <div id="error-log-modal-header">
+        <span class="label">エラーログ</span>
+        <button id="error-log-modal-close">&#10005;</button>
+      </div>
+      <div id="error-log-modal-body">
+        <span class="placeholder">エラーはありません</span>
+      </div>
     </div>
   </div>
 
@@ -1428,6 +1574,10 @@
     const errorLogBody = document.getElementById("error-log-body");
     const errorLogBadge = document.getElementById("error-log-badge");
     const errorLogClear = document.getElementById("error-log-clear");
+    const errorLogExpand = document.getElementById("error-log-expand");
+    const errorLogOverlay = document.getElementById("error-log-overlay");
+    const errorLogModalBody = document.getElementById("error-log-modal-body");
+    const errorLogModalClose = document.getElementById("error-log-modal-close");
     const MAX_ERROR_ENTRIES = 50;
     let errorCount = 0;
 
@@ -1435,11 +1585,7 @@
       translation: "翻訳", transcription: "文字起こし", summary: "要約", mood: "分析",
     };
 
-    function addErrorLog(data) {
-      const placeholder = errorLogBody.querySelector(".placeholder");
-      if (placeholder) placeholder.remove();
-      const entry = document.createElement("div");
-      entry.className = "error-entry";
+    function buildErrorEntryHtml(data) {
       const time = new Date(data.timestamp);
       const timeStr = time.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       const catLabel = CATEGORY_LABELS[data.category] || data.category || "";
@@ -1451,7 +1597,13 @@
         html += '<span class="error-detail-toggle">&#9654;</span>';
         html += '<div class="error-detail">' + escapeHtml(data.detail) + '</div>';
       }
-      entry.innerHTML = html;
+      return html;
+    }
+
+    function createErrorEntry(data) {
+      const entry = document.createElement("div");
+      entry.className = "error-entry";
+      entry.innerHTML = buildErrorEntryHtml(data);
       if (data.detail) {
         const toggle = entry.querySelector(".error-detail-toggle");
         const detail = entry.querySelector(".error-detail");
@@ -1460,23 +1612,49 @@
           toggle.innerHTML = detail.classList.contains("open") ? "&#9660;" : "&#9654;";
         });
       }
-      errorLogBody.appendChild(entry);
-      while (errorLogBody.querySelectorAll(".error-entry").length > MAX_ERROR_ENTRIES) {
-        errorLogBody.querySelector(".error-entry").remove();
+      return entry;
+    }
+
+    function appendToContainer(container, entry) {
+      const placeholder = container.querySelector(".placeholder");
+      if (placeholder) placeholder.remove();
+      container.appendChild(entry);
+      while (container.querySelectorAll(".error-entry").length > MAX_ERROR_ENTRIES) {
+        container.querySelector(".error-entry").remove();
       }
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addErrorLog(data) {
+      errorLogBody.innerHTML = "";
+      errorLogBody.appendChild(createErrorEntry(data));
+      appendToContainer(errorLogModalBody, createErrorEntry(data));
       errorCount++;
       errorLogBadge.textContent = errorCount;
       errorLogBadge.classList.add("visible");
-      errorLogBody.scrollTop = errorLogBody.scrollHeight;
     }
 
     function clearErrorLog() {
       errorLogBody.innerHTML = '<span class="placeholder">エラーはありません</span>';
+      errorLogModalBody.innerHTML = '<span class="placeholder">エラーはありません</span>';
       errorCount = 0;
       errorLogBadge.classList.remove("visible");
     }
 
     errorLogClear.addEventListener("click", clearErrorLog);
+
+    errorLogExpand.addEventListener("click", () => {
+      errorLogOverlay.classList.remove("hidden");
+      errorLogModalBody.scrollTop = errorLogModalBody.scrollHeight;
+    });
+
+    errorLogModalClose.addEventListener("click", () => {
+      errorLogOverlay.classList.add("hidden");
+    });
+
+    errorLogOverlay.addEventListener("click", (e) => {
+      if (e.target === errorLogOverlay) errorLogOverlay.classList.add("hidden");
+    });
 
     socket.on("error-log", (data) => {
       addErrorLog(data);
